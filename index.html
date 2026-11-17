@@ -141,6 +141,7 @@ input:disabled,select:disabled{opacity:.55}
     <div class="tabs">
       <button class="tab on" data-tab="sim">Simulação</button>
       <button class="tab" data-tab="cfg">Parâmetros de preço</button>
+      <button class="tab" data-tab="leads">Contatos</button>
     </div>
   </div>
 </header>
@@ -154,6 +155,11 @@ input:disabled,select:disabled{opacity:.55}
       <h2><span class="n">1</span>Cliente e local</h2>
       <label>Nome do cliente</label>
       <input id="cliente" placeholder="Ex.: João da Silva">
+      <div class="row">
+        <div><label>Telefone / WhatsApp</label><input id="cliTel" type="tel" inputmode="tel" placeholder="(61) 9 0000-0000"></div>
+        <div><label>E-mail</label><input id="cliEmail" type="email" inputmode="email" placeholder="nome@email.com"></div>
+      </div>
+      <div class="hint">Informe o telefone ou o e-mail para gerar a proposta. A ALFAPI usa esses dados só para retornar sobre este orçamento.</div>
       <label>Endereço / cidade <span style="font-weight:500">(opcional)</span></label>
       <input id="endereco" placeholder="Ex.: SHIS QI 15, Lago Sul – Brasília">
       <label>Localização <span style="font-weight:500">(coordenadas ou link do Google Maps)</span></label>
@@ -372,6 +378,19 @@ input:disabled,select:disabled{opacity:.55}
     </div>
   </div>
 </div>
+</section>
+
+<!-- ================= CONTATOS ================= -->
+<section id="tab-leads" class="hidden">
+  <div class="card">
+    <h2>Registro de quem fez orçamento</h2>
+    <div class="hint" id="leadsInfo"></div>
+    <div class="actions" style="margin:8px 0">
+      <button class="btn mini" id="leadsCsv" type="button">⬇️ Baixar planilha (CSV)</button>
+      <button class="btn sec mini" id="leadsLimpar" type="button">Apagar registro deste navegador</button>
+    </div>
+    <div style="overflow-x:auto"><table id="t-leads"></table></div>
+  </div>
 </section>
 
 <!-- ================= PARÂMETROS ================= -->
@@ -1022,6 +1041,7 @@ document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
   $("tab-sim").classList.toggle("hidden",t.dataset.tab!=="sim");
   $("tab-cfg").classList.toggle("hidden",t.dataset.tab!=="cfg");
+  $("tab-leads").classList.toggle("hidden",t.dataset.tab!=="leads");if(t.dataset.tab==="leads")renderLeads();
 });
 
 const CFG_IDS=Object.keys(CFG_DEF), CFG_KEY="fv_cfg_v3";
@@ -1285,6 +1305,7 @@ function abbr(v){const a=Math.abs(v);const s=v<0?"-":"";return a>=1e6?s+"R$"+num
 // =================== AÇÕES ===================
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");setTimeout(()=>e.classList.remove("on"),2200)}
 $("copiar").onclick=async()=>{
+  if(!contatoOk())return;registrarLead("Resumo copiado");
   const d=last,o=d.sel;const cli=$("cliente").value.trim();
   const ori=$("ori").selectedOptions[0].textContent, incl=$("incl").selectedOptions[0].textContent, tel=$("telhado").selectedOptions[0].textContent;
   const S=d.ops.string,Mi=d.ops.micro;
@@ -1314,7 +1335,7 @@ Valores estimados, já considerando o custo mínimo da distribuidora e a cobran�
   try{await navigator.clipboard.writeText(txt);toast("Resumo copiado")}catch(e){toast("Não foi possível copiar")}
 };
 $("limpar").onclick=()=>{
-  $("cliente").value="";ufSel.value="DF";preencherHSP("DF");$("consumo").value=600;$("conta").value=550;$("tarifa").value=1.10;
+  $("cliente").value="";$("cliTel").value="";$("cliEmail").value="";ufSel.value="DF";preencherHSP("DF");$("consumo").value=600;$("conta").value=550;$("tarifa").value=1.10;
   $("cip").value=0;$("simult").value="0.35";$("ori").value="0";$("incl").value="15";$("somb").value=0;
   $("telhado").value="ceramico";$("madeira").value="nd";$("modulo").value=CAT.modulos[0].id;aplicarModulo();
   $("pr").value=0.80;$("cob").value=100;$("endereco").value="";$("coord").value="";atualizarLoc(false);$("satRem").click();
@@ -1536,10 +1557,9 @@ async function localizarNoMapa(ev){
   if(!auto)try{$("cardMapa").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
   $("gMsg").textContent="⏳ Carregando o mapa…";
   {const e0=$("endereco").value.trim();$("gExterno").href=LOC?`https://www.google.com/maps/@?api=1&map_action=map&center=${LOC.lat},${LOC.lng}&zoom=20&basemap=satellite`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e0||"")+", "+ufSel.value+", Brasil")}`}
-  if(!gKey()){googleBasico();return}
-  $("gChaveBox").classList.add("hidden");
+  $("gChaveBox").classList.toggle("hidden",!!gKey());
   let tipo="esri";
-  if(!gFalhou){try{await comTempo(carregarGoogle(),12000);tipo="google"}catch(e){$("gMsg").textContent="Google Maps indisponível ("+e.message+"): usando o mapa alternativo."}}
+  if(gKey()&&!gFalhou){try{await comTempo(carregarGoogle(),12000);tipo="google"}catch(e){$("gMsg").textContent="Google Maps indisponível ("+e.message+"): usando o mapa alternativo."}}
   if(MP.tipo!==tipo){MP.map=null;MP.mk=null;const novo=$("gmap").cloneNode(false);novo.innerHTML="";$("gmap").replaceWith(novo)}
   try{
     if(tipo==="google"&&!MP.map){
@@ -1561,7 +1581,7 @@ async function localizarNoMapa(ev){
     else{MP.map.setView([p.lat,p.lng],p.z);MP.mk.setLatLng([p.lat,p.lng]);setTimeout(()=>MP.map.invalidateSize(),200)}
     definirPos(p.lat,p.lng);
     $("gMsg").innerHTML=p.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
-    $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":"O Google não aceitou a chave; mostrando o mapa alternativo (imagens Esri). Confira as APIs ativadas e a restrição de domínio da chave.";
+    $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":(gKey()?"O Google não aceitou a chave; mostrando o mapa alternativo (imagens Esri). Confira as APIs ativadas e a restrição de domínio da chave.":"Mapa sem chave: imagens Esri. Para usar as imagens do Google, salve a chave no quadro acima.");
   }catch(e){console.error(e);mapaReserva(e.message||"erro")}}
 // o mapa já abre com a página e acompanha as coordenadas digitadas
 setTimeout(()=>localizarNoMapa("auto"),400);
@@ -2008,14 +2028,16 @@ function gerarPDF(){
 
   // bloco do cliente
   const locTxt=[end,LOC?"Coordenadas: "+fmtCoord(LOC):""].filter(Boolean).join("  ·  ");
-  doc.setFillColor(...CLARO);doc.roundedRect(M,y,CW,locTxt?19:14,2,2,"F");
+  const contTxt=[$("cliTel").value.trim(),$("cliEmail").value.trim()].filter(Boolean).join("  ·  ");
+  doc.setFillColor(...CLARO);doc.roundedRect(M,y,CW,(locTxt||contTxt)?19:14,2,2,"F");
   doc.setFontSize(8);doc.setTextColor(...CINZA);T("CLIENTE",M+4,y+5);
   doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...NAVY);T(cli,M+4,y+10.5);
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...CINZA);
   const lig={30:"Monofásica",50:"Bifásica",100:"Trifásica"}[d.disp];
   T(`Ligação ${lig}  ·  ${$("uf").value}`,W-M-4,y+10.5,{align:"right"});
-  if(locTxt)T(doc.splitTextToSize(pdfTxt(locTxt),CW-8)[0],M+4,y+15.5);
-  y+=(locTxt?19:14)+7;
+  if(locTxt)T(doc.splitTextToSize(pdfTxt(locTxt),contTxt?CW*0.55:CW-8)[0],M+4,y+15.5);
+  if(contTxt)T(contTxt,W-M-4,y+15.5,{align:"right"});
+  y+=((locTxt||contTxt)?19:14)+7;
 
   // localização do projeto (mapa com pino)
   const MP=MAPA?imagemMapa():null;
@@ -2212,9 +2234,57 @@ function gerarPDF(){
   return {doc,nomeArq};
 }
 
+
+// ---- Registro de contatos (leads) ----
+// Endereço do Apps Script que grava na planilha do Google da ALFAPI (preencher após a implantação).
+const LEADS_URL="";
+const LEADS_PLANILHA="https://docs.google.com/spreadsheets/d/1HnY9JA66DbBO7wL5Deo5jVxb0cAUNTVBw7B35SEZRiE/edit";
+const LEADS_K="fv_leads_v1";
+const soDig=t=>String(t||"").replace(/\D/g,"");
+function contatoOk(){
+  const nome=$("cliente").value.trim(),tel=soDig($("cliTel").value),em=$("cliEmail").value.trim();
+  const telOk=tel.length>=10&&tel.length<=13,emOk=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em);
+  let erro="";
+  if(!nome)erro="Informe o nome do cliente";
+  else if(!telOk&&!emOk)erro=(tel||em)?"Confira o telefone (com DDD) ou o e-mail":"Informe o telefone ou o e-mail do cliente";
+  ["cliente","cliTel","cliEmail"].forEach(i=>$(i).style.borderColor="");
+  if(erro){const alvo=!nome?"cliente":(tel?"cliTel":(em?"cliEmail":"cliTel"));$(alvo).style.borderColor="#d64545";
+    try{$(alvo).scrollIntoView({behavior:"smooth",block:"center"})}catch(e){}$(alvo).focus();toast(erro);return false}
+  return true}
+function registrarLead(origem){
+  const d=last;if(!d)return;
+  const o1=d.ops&&d.ops.string,o2=d.ops&&d.ops.micro,agora=new Date();
+  const L={data:agora.toLocaleString("pt-BR"),ts:agora.getTime(),nome:$("cliente").value.trim(),telefone:$("cliTel").value.trim(),email:$("cliEmail").value.trim(),
+    endereco:$("endereco").value.trim(),uf:$("uf").value,coordenadas:LOC?fmtCoord(LOC):"",consumo_kwh_mes:Math.round(d.consMed||0),
+    potencia_kwp:+(+d.kwp).toFixed(2),modulos:d.nMod,telhado:d.telhado,
+    invest_string:o1?Math.round(o1.total):"",invest_micro:o2?Math.round(o2.total):"",origem};
+  const lista=store.get(LEADS_K)||[];
+  const ult=lista[lista.length-1];
+  if(ult&&ult.nome===L.nome&&ult.telefone===L.telefone&&ult.email===L.email&&L.ts-ult.ts<30*60000)lista[lista.length-1]=L;else lista.push(L);
+  store.set(LEADS_K,lista.slice(-500));
+  if(LEADS_URL)try{fetch(LEADS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(L)}).catch(()=>{})}catch(e){}}
+const LEAD_COLS=[["data","Data"],["nome","Nome"],["telefone","Telefone"],["email","E-mail"],["endereco","Endereço"],["uf","UF"],["coordenadas","Coordenadas"],
+  ["consumo_kwh_mes","Consumo (kWh/mês)"],["potencia_kwp","Potência (kWp)"],["modulos","Módulos"],["telhado","Telhado"],["invest_string","Invest. string (R$)"],["invest_micro","Invest. micro (R$)"],["origem","Origem"]];
+function renderLeads(){
+  const lista=(store.get(LEADS_K)||[]).slice().reverse();
+  $("leadsInfo").innerHTML=(LEADS_URL?`Os orçamentos feitos em <b>qualquer aparelho</b> são enviados para a planilha do Google da ALFAPI${LEADS_PLANILHA?` (<a href="${LEADS_PLANILHA}" target="_blank" rel="noopener">abrir planilha</a>)`:""}. `
+    :`<span class="w">A planilha online ainda não está ligada: por enquanto só ficam aqui os orçamentos feitos <b>neste navegador</b>.</span> `)+
+    `Abaixo, ${lista.length} registro(s) deste navegador.`;
+  const wa=t=>{let n=soDig(t);if(!n)return "";if(n.length<=11)n="55"+n;return `<a href="https://wa.me/${n}" target="_blank" rel="noopener">${esc(t)}</a>`};
+  $("t-leads").innerHTML=lista.length?`<tr><th>Data</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Local</th><th class="r">Consumo</th><th class="r">kWp</th><th class="r">String</th><th class="r">Micro</th></tr>`+
+    lista.map(L=>`<tr><td>${esc(L.data)}</td><td>${esc(L.nome)}</td><td>${wa(L.telefone)}</td><td>${L.email?`<a href="mailto:${esc(L.email)}">${esc(L.email)}</a>`:""}</td>
+      <td>${esc([L.endereco,L.uf].filter(Boolean).join(" – "))}</td><td class="r">${num(L.consumo_kwh_mes)} kWh</td><td class="r">${num(L.potencia_kwp,2)}</td>
+      <td class="r">${L.invest_string?"R$ "+num(L.invest_string):"–"}</td><td class="r">${L.invest_micro?"R$ "+num(L.invest_micro):"–"}</td></tr>`).join("")
+    :`<tr><td style="color:var(--muted)">Nenhum orçamento registrado neste navegador ainda.</td></tr>`}
+$("leadsCsv").onclick=()=>{const lista=store.get(LEADS_K)||[];if(!lista.length){toast("Nenhum registro para baixar");return}
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const csv="﻿"+[LEAD_COLS.map(c=>q(c[1])).join(";")].concat(lista.map(L=>LEAD_COLS.map(c=>q(L[c[0]])).join(";"))).join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="contatos-orcamentos-alfapi.csv";document.body.appendChild(a);a.click();a.remove()};
+$("leadsLimpar").onclick=()=>{if(!confirm("Apagar todos os contatos registrados neste navegador? (A planilha do Google não é afetada.)"))return;store.set(LEADS_K,[]);renderLeads();toast("Registro apagado")};
 $("pdf").onclick=()=>{
   if(!window.jspdf){toast("Biblioteca de PDF não carregou");return}
-  try{const r=gerarPDF();r.doc.save(r.nomeArq);toast("Proposta gerada")}catch(e){console.error(e);toast("Erro ao gerar o PDF")}
+  if(!contatoOk())return;
+  try{const r=gerarPDF();r.doc.save(r.nomeArq);registrarLead("Proposta PDF");toast("Proposta gerada")}catch(e){console.error(e);toast("Erro ao gerar o PDF")}
 };
 window.__gerarPDF=gerarPDF;
 </script>
