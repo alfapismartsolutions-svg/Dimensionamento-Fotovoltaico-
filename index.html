@@ -1536,19 +1536,28 @@ function carregarGoogle(){if(window.google&&google.maps&&google.maps.Map)return 
     const s=document.createElement("script");s.async=true;s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(k)}&callback=__gmInit&loading=async&language=pt-BR&region=BR`;
     s.onerror=()=>{_gLoad=null;rej(new Error("sem conexão com o Google Maps"))};document.head.appendChild(s)});return _gLoad}
 const comTempo=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error("tempo esgotado")),ms))]);
-function definirPos(lat,lng){$("coord").value=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;atualizarLoc(true);calc();
+function definirPos(lat,lng){endAuto=false;$("coord").value=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;atualizarLoc(true);calc();
   $("gExterno").href=`https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lng}&zoom=20&basemap=satellite`}
+async function geocodificar(end,tipo){
+  const uf=ufSel.value,q=end+", "+uf+", Brasil";
+  try{
+    if(tipo==="google"){const r=await new Promise(res=>new google.maps.Geocoder().geocode({address:q,region:"BR"},(r,st)=>res(st==="OK"?r:null)));
+      if(r&&r.length){const g=r[0].geometry,ex=g.location_type==="ROOFTOP";return {lat:g.location.lat(),lng:g.location.lng(),z:ex?20:17,msg:ex?"Endereço encontrado.":"<b>Localização aproximada</b> (bairro/quadra): arraste o pino até o telhado."}}
+      return null}
+    // sem Google: tenta o endereço completo e depois versões mais curtas (quadra/bairro/cidade)
+    const partes=end.split(/[,–\-]/).map(t=>t.trim()).filter(Boolean),tentativas=[end];
+    for(let k=1;k<partes.length;k++)tentativas.push(partes.slice(k).join(", "));
+    for(let k=0;k<tentativas.length;k++){
+      if(k)await new Promise(r=>setTimeout(r,1100)); // limite de uso do Nominatim (1 consulta/s)
+      const r=await comTempo(fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(tentativas[k]+", "+uf+", Brasil")}`),8000).then(x=>x.json());
+      if(r&&r.length)return {lat:+r[0].lat,lng:+r[0].lon,z:k?16:17,msg:"<b>Localização aproximada</b> pelo endereço: arraste o pino até o telhado do cliente."}}
+  }catch(e){console.warn(e)}
+  return null}
 async function posInicial(tipo){
   if(LOC)return {lat:LOC.lat,lng:LOC.lng,z:19,msg:"Pino nas coordenadas informadas."};
   const end=$("endereco").value.trim(),cap=CAPITAIS[ufSel.value];
   if(!end)return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Sem endereço: navegue até o imóvel e clique no telhado.</span>'};
-  const q=end+", "+ufSel.value+", Brasil";
-  try{
-    if(tipo==="google"){const r=await new Promise(res=>new google.maps.Geocoder().geocode({address:q,region:"BR"},(r,st)=>res(st==="OK"?r:null)));
-      if(r&&r.length){const g=r[0].geometry,ex=g.location_type==="ROOFTOP";return {lat:g.location.lat(),lng:g.location.lng(),z:ex?20:17,msg:ex?"Endereço encontrado.":"<b>Localização aproximada</b> (bairro/quadra): arraste o pino até o telhado."}}}
-    else{const r=await comTempo(fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(q)}`),8000).then(x=>x.json());
-      if(r&&r.length)return {lat:+r[0].lat,lng:+r[0].lon,z:17,msg:"<b>Localização aproximada</b> pelo endereço: arraste o pino até o telhado do cliente."}}
-  }catch(e){console.warn(e)}
+  const g=await geocodificar(end,tipo);if(g)return g;
   return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Endereço não encontrado: navegue até o imóvel e clique no telhado.</span>'}}
 function mapaReserva(motivo){ // mapa do Google incorporado (sem chave) quando o interativo não carrega
   const end=$("endereco").value.trim(),q=LOC?`${LOC.lat},${LOC.lng}`:(end?end+", ":"")+ufSel.value+", Brasil";
@@ -1589,10 +1598,11 @@ async function localizarNoMapa(ev){
       MP.mk.on("dragend",()=>{const p=MP.mk.getLatLng();definirPos(p.lat,p.lng)});
       MP.map.on("click",e=>{MP.mk.setLatLng(e.latlng);definirPos(e.latlng.lat,e.latlng.lng)})}
     MP.tipo=tipo;
+    const doEnd=!LOC&&!!$("endereco").value.trim();
     const p=auto&&!LOC&&!$("endereco").value.trim()?{lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2],z:11,msg:"Informe o endereço ou as coordenadas no passo 1 e clique em 📍 Localizar no mapa, ou navegue e clique no telhado."}:await posInicial(tipo);
     if(tipo==="google"){MP.map.setCenter({lat:p.lat,lng:p.lng});MP.map.setZoom(p.z);MP.mk.setPosition({lat:p.lat,lng:p.lng})}
     else{MP.map.setView([p.lat,p.lng],p.z);MP.mk.setLatLng([p.lat,p.lng]);setTimeout(()=>MP.map.invalidateSize(),200)}
-    definirPos(p.lat,p.lng);
+    definirPos(p.lat,p.lng);if(doEnd)endAuto=true;
     $("gMsg").innerHTML=p.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
     $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":(gKey()?"O Google não aceitou a chave; mostrando o mapa alternativo (imagens Esri). Confira as APIs ativadas e a restrição de domínio da chave.":"Mapa sem chave: imagens Esri. Para usar as imagens do Google, salve a chave no quadro acima.");
   }catch(e){console.error(e);mapaReserva(e.message||"erro")}}
@@ -1604,7 +1614,20 @@ $("coord").addEventListener("input",()=>{clearTimeout(_tCoord);_tCoord=setTimeou
   else if(MP.tipo==="esri"&&MP.map){MP.map.setView([LOC.lat,LOC.lng],19);MP.mk.setLatLng([LOC.lat,LOC.lng])}
   else if(MP.tipo==="iframe")googleBasico()},900)});
 $("gLocalizar").onclick=localizarNoMapa;
-let _tEnd=null;$("endereco").addEventListener("input",()=>{clearTimeout(_tEnd);_tEnd=setTimeout(()=>{if(MP.tipo==="iframe"&&!LOC)googleBasico()},1200)});
+let _tEnd=null,endAuto=false,_endSeq=0;
+$("coord").addEventListener("input",()=>{endAuto=false});
+$("endereco").addEventListener("input",()=>{clearTimeout(_tEnd);_tEnd=setTimeout(async()=>{
+  const end=$("endereco").value.trim();if(end.length<5)return;
+  if(LOC&&!endAuto)return; // coordenadas digitadas ou pino ajustado à mão têm prioridade
+  if(MP.tipo==="iframe"){if(endAuto){$("coord").value="";atualizarLoc(false);endAuto=false}googleBasico();return}
+  if(!MP.map)return;
+  const seq=++_endSeq;$("gMsg").textContent="⏳ Procurando o endereço no mapa…";
+  const g=await geocodificar(end,MP.tipo);if(seq!==_endSeq)return;
+  if(!g){$("gMsg").innerHTML='<span style="color:var(--warn)">Endereço não encontrado: complete com bairro/cidade ou clique no telhado no mapa.</span>';return}
+  if(MP.tipo==="google"){MP.map.setCenter({lat:g.lat,lng:g.lng});MP.map.setZoom(g.z);MP.mk.setPosition({lat:g.lat,lng:g.lng})}
+  else{MP.map.setView([g.lat,g.lng],g.z);MP.mk.setLatLng([g.lat,g.lng])}
+  definirPos(g.lat,g.lng);endAuto=true;
+  $("gMsg").innerHTML=g.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>."},1300)});
 
 // ---- captura da vista ----
 const mpp=(lat,z)=>156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z); // metros por pixel no zoom z
