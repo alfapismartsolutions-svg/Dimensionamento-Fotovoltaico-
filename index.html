@@ -250,14 +250,17 @@ input:disabled,select:disabled{opacity:.55}
           <option value="nd">Não sei</option><option value="madeira">Madeira</option><option value="metal">Metálica (terças de aço)</option></select></div>
       </div>
       <div class="hint" id="estrHint"></div>
-      <label>Módulo fotovoltaico</label>
-      <select id="modulo"><option value="">Menor custo</option></select>
+      <div class="row">
+        <div><label>Potência do módulo</label><select id="modPot"><option value="">Menor custo</option></select></div>
+        <div><label>Marca / modelo do módulo</label><select id="modulo"><option value="">Menor custo</option></select></div>
+      </div>
+      <div class="hint" id="modHint"></div>
       <div class="row">
         <div><label>Inversor string (opção 1)</label><select id="invMarca"><option value="">Menor custo</option></select></div>
         <div><label>Microinversor (opção 2)</label><select id="microSel"><option value="">Menor custo</option></select></div>
       </div>
       <div class="row">
-        <div><label>Potência do módulo (W)</label><input id="wp" type="number"></div>
+        <div><label>Potência escolhida (W)</label><input id="wp" type="number" readonly></div>
         <div><label>Área do módulo (m²)</label><input id="area" type="number" step="0.01"></div>
       </div>
       <div class="row">
@@ -946,14 +949,14 @@ const fiobPct=a=>a<=2022?0:a===2023?.15:a===2024?.30:a===2025?.45:a===2026?.60:a
 const CAT_DEF={
   // voc/vmp/isc (STC), bvoc (%/°C) e garantia vêm dos datasheets; null = não informado
   modulos:[
-    {id:"ja620",nome:"Módulo JA Solar JAM66D45-620/LB 620 W bifacial",marca:"JA Solar",wp:620,area:2.71,comp:2.384,larg:1.134,voc:48.50,vmp:40.21,isc:16.13,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:809.10,forn:"Minha Casa Solar"},
-    {id:"dah620",nome:"Módulo DAH Solar DHN-66Z16/DG 620 W bifacial",marca:"DAH Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:48.6,vmp:41.3,isc:null,bvoc:null,gar:"",preco:668.67,forn:"NeoSolar"},
-    {id:"cs620",nome:"Módulo Canadian Solar CS6.2-66TB 620 W bifacial",marca:"Canadian Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:809.10,forn:"Minha Casa Solar"},
-    {id:"era620",nome:"Módulo Era Solar 620 W bifacial N-type",marca:"Era Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:669.98,forn:"MeuGerador"},
-    {id:"han620",nome:"Módulo Hanersun HiTouch 620 W bifacial N-type",marca:"Hanersun",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:752.85,forn:"MeuGerador"},
-    {id:"osda610",nome:"Módulo Osda ODA610-33V-MHDRZ 610 W bifacial",marca:"Osda",wp:610,area:2.71,comp:2.382,larg:1.134,voc:48.68,vmp:40.46,isc:15.96,bvoc:null,gar:"",preco:655.65,forn:"Minha Casa Solar"},
-    {id:"jk620",nome:"Módulo Jinko Tiger Neo JKM620N-66HL4M-BDV 620 W bifacial",marca:"Jinko Solar",wp:620,area:2.70,comp:2.382,larg:1.134,voc:49.08,vmp:40.74,isc:16.08,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:929.00,forn:"Recarga Solar"},
-    {id:"tr605",nome:"Módulo Trina Vertex N TSM-605NEG19RC.20 605 W bifacial",marca:"Trina Solar",wp:605,area:2.70,comp:2.384,larg:1.134,voc:48.70,vmp:40.50,isc:15.83,bvoc:-0.24,gar:"12 anos produto · 30 anos desempenho",preco:652.00,forn:"Buyers Energy"}
+    {id:"ja620",serie:"JA Solar DeepBlue JAM66D45",tpl:"Módulo JA Solar JAM66D45-{W}/LB {W} W bifacial",bins:[[605,47.9,39.6,16.00],[615,48.30,39.96,16.10],[620,48.50,40.21,16.13],[625,48.70,40.45,16.15],[630,48.90,40.70,16.18]],nome:"Módulo JA Solar JAM66D45-620/LB 620 W bifacial",marca:"JA Solar",wp:620,area:2.71,comp:2.384,larg:1.134,voc:48.50,vmp:40.21,isc:16.13,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:809.10,forn:"Minha Casa Solar"},
+    {id:"dah620",serie:"DAH Solar DHN-66Z16/DG",tpl:"Módulo DAH Solar DHN-66Z16/DG-{W} {W} W bifacial",bins:[[620,48.6,41.3,16.00]],nome:"Módulo DAH Solar DHN-66Z16/DG 620 W bifacial",marca:"DAH Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:48.6,vmp:41.3,isc:null,bvoc:null,gar:"",preco:668.67,forn:"NeoSolar"},
+    {id:"cs620",serie:"Canadian Solar TOPBiHiKu6 CS6.2-66TB",tpl:"Módulo Canadian Solar CS6.2-66TB-{W} {W} W bifacial",bins:[[600,47.6,40.4,15.85],[605,47.8,40.6,15.91],[610,48.0,40.8,15.97],[615,48.2,41.0,16.02],[620,48.4,41.2,16.08]],nome:"Módulo Canadian Solar CS6.2-66TB 620 W bifacial",marca:"Canadian Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:809.10,forn:"Minha Casa Solar"},
+    {id:"era620",serie:"Era Solar N-type",tpl:"Módulo Era Solar {W} W bifacial N-type",bins:[[620,null,null,null]],nome:"Módulo Era Solar 620 W bifacial N-type",marca:"Era Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:669.98,forn:"MeuGerador"},
+    {id:"han620",serie:"Hanersun HiTouch",tpl:"Módulo Hanersun HiTouch {W} W bifacial N-type",bins:[[620,null,null,null]],nome:"Módulo Hanersun HiTouch 620 W bifacial N-type",marca:"Hanersun",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:752.85,forn:"MeuGerador"},
+    {id:"osda610",serie:"Osda ODA-33V-MHDRZ",tpl:"Módulo Osda ODA{W}-33V-MHDRZ {W} W bifacial",bins:[[610,48.68,40.46,15.96]],nome:"Módulo Osda ODA610-33V-MHDRZ 610 W bifacial",marca:"Osda",wp:610,area:2.71,comp:2.382,larg:1.134,voc:48.68,vmp:40.46,isc:15.96,bvoc:null,gar:"",preco:655.65,forn:"Minha Casa Solar"},
+    {id:"jk620",serie:"Jinko Tiger Neo 66HL4M-BDV",tpl:"Módulo Jinko Tiger Neo JKM{W}N-66HL4M-BDV {W} W bifacial",bins:[[600,48.28,40.16,15.84],[605,48.48,40.31,15.90],[610,48.68,40.46,15.96],[615,48.88,40.60,16.02],[620,49.08,40.74,16.08],[625,49.28,40.88,16.14],[630,49.48,41.02,16.20]],nome:"Módulo Jinko Tiger Neo JKM620N-66HL4M-BDV 620 W bifacial",marca:"Jinko Solar",wp:620,area:2.70,comp:2.382,larg:1.134,voc:49.08,vmp:40.74,isc:16.08,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:929.00,forn:"Recarga Solar"},
+    {id:"tr605",serie:"Trina Vertex N NEG19RC.20",tpl:"Módulo Trina Vertex N TSM-{W}NEG19RC.20 {W} W bifacial",bins:[[590,47.8,39.7,15.72],[595,48.1,40.0,15.76],[600,48.4,40.3,15.80],[605,48.7,40.5,15.83],[610,49.0,40.8,15.86],[615,49.3,41.1,15.89],[620,49.6,41.4,15.91]],nome:"Módulo Trina Vertex N TSM-605NEG19RC.20 605 W bifacial",marca:"Trina Solar",wp:605,area:2.70,comp:2.384,larg:1.134,voc:48.70,vmp:40.50,isc:15.83,bvoc:-0.24,gar:"12 anos produto · 30 anos desempenho",preco:652.00,forn:"Buyers Energy"}
   ],
   // vmax (V) e imax (A por MPPT) só quando confirmados no datasheet
   string:[
@@ -1016,7 +1019,7 @@ function renderCat(){
     CAT[g].forEach(it=>h+=`<tr><td>${esc(it.nome)}</td><td><input data-g="${g}" data-id="${it.id}" data-k="forn" value="${esc(it.forn)}"></td><td><input type="number" step="0.01" data-g="${g}" data-id="${it.id}" data-k="preco" value="${it.preco}" style="text-align:right"></td></tr>`)}
   $("t-cat").innerHTML=h;
   $("t-cat").querySelectorAll("input").forEach(e=>e.addEventListener("input",()=>{
-    const it=CAT[e.dataset.g].find(x=>x.id===e.dataset.id);it[e.dataset.k]=e.dataset.k==="preco"?(+e.value||0):e.value;salvarCat();calc()}));
+    const it=CAT[e.dataset.g].find(x=>x.id===e.dataset.id);it[e.dataset.k]=e.dataset.k==="preco"?(+e.value||0):e.value;salvarCat();if(typeof preencherModulos==="function")preencherModulos();calc()}));
 }
 $("catReset").onclick=()=>{CAT=JSON.parse(JSON.stringify(CAT_DEF));store.set(CAT_KEY,null);renderCat();calc();toast("Catálogo restaurado")};
 
@@ -1046,10 +1049,17 @@ $("hsp").addEventListener("input",()=>{
 hspInputs.forEach(e=>e.addEventListener("input",()=>{$("hsp").value=(soma(hspInputs.map(x=>+x.value||0))/12).toFixed(2)}));
 
 // módulos
-CAT.modulos.forEach(m=>$("modulo").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome)} · ${brl(m.preco)}</option>`));
+const binsDe=m=>m.bins&&m.bins.length?m.bins:[[m.wp,m.voc,m.vmp,m.isc]];
+const precoBin=(m,w)=>m.preco*w/m.wp; // mesmo R$/Wp do preço de referência
+function serieNome(m){const b=binsDe(m).map(x=>x[0]),f=b.length>1?`${Math.min(...b)}–${Math.max(...b)} W`:`${b[0]} W`;
+  return `${m.serie||m.nome.replace(/^Módulo /,"")} · ${f} · ${brl2(m.preco/m.wp)}/Wp`}
+function preencherModulos(){const sel=$("modulo"),v=sel.value;sel.innerHTML='<option value="">Menor custo</option>'+CAT.modulos.map(m=>`<option value="${m.id}">${esc(serieNome(m))}</option>`).join("");sel.value=v;
+  const pots=[...new Set(CAT.modulos.flatMap(m=>binsDe(m).map(b=>b[0])))].sort((a,b)=>b-a),ps=$("modPot"),pv=ps.value;
+  ps.innerHTML='<option value="">Menor custo</option>'+pots.map(p=>`<option value="${p}">${p} W</option>`).join("");ps.value=pv}
+preencherModulos();
 [...new Set(CAT.string.map(i=>i.marca))].forEach(m=>$("invMarca").insertAdjacentHTML("beforeend",`<option value="${m}">${m}</option>`));
 CAT.micro.forEach(m=>$("microSel").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome.replace("Microinversor ",""))}</option>`));
-function aplicarModulo(){const auto=!$("modulo").value;["wp","area"].forEach(i=>$(i).readOnly=auto);
+function aplicarModulo(){["wp","area"].forEach(i=>$(i).readOnly=true);
   const m=CAT.modulos.find(x=>x.id===$("modulo").value)||CAT.modulos[0];$("wp").value=m.wp;$("area").value=m.area;
   if($("modComp")){$("modComp").value=m.comp;$("modLarg").value=m.larg}}
 $("modulo").addEventListener("change",aplicarModulo);aplicarModulo();
@@ -1189,6 +1199,22 @@ function financeiro(op,c,base,nMod){
 
 // =================== CÁLCULO ===================
 let last=null;
+// escolhe série e potência: as fixadas pelo usuário ou as de menor custo total
+function resolverModulo(nPar){
+  const sid=$("modulo").value,pot=+$("modPot").value||0;
+  const series=sid?CAT.modulos.filter(m=>m.id===sid):CAT.modulos;
+  let cand=[];series.forEach(m=>binsDe(m).forEach(b=>{if(!pot||b[0]===pot)cand.push({m,b})}));
+  let aviso="";
+  if(!cand.length){ // a marca escolhida não tem essa potência: usa a mais próxima dela
+    series.forEach(m=>binsDe(m).forEach(b=>cand.push({m,b})));
+    const d=x=>Math.abs(x.b[0]-pot);const mn=Math.min(...cand.map(d));cand=cand.filter(x=>d(x)===mn);
+    aviso=`Esse modelo não tem ${pot} W: usado o de ${cand[0].b[0]} W.`}
+  cand.sort((x,y)=>nPar(x.b[0])*precoBin(x.m,x.b[0])-nPar(y.b[0])*precoBin(y.m,y.b[0])||y.b[0]-x.b[0]);
+  const {m,b}=cand[0],w=b[0];
+  const mod={...m,wp:w,voc:b[1],vmp:b[2],isc:b[3],preco:+precoBin(m,w).toFixed(2),
+    nome:(m.tpl||m.nome).replace(/\{W\}/g,w),forn:m.forn+(w!==m.wp?" (preço proporcional ao Wp)":"")};
+  $("modHint").innerHTML=(aviso?`<span style="color:var(--warn)">${aviso}</span> `:"")+`Selecionado: <b>${esc(mod.nome.replace(/^Módulo /,""))}</b> · ${brl(mod.preco)}`;
+  return mod}
 function calc(){
   const c=readCfg();
   const tar=+$("tarifa").value||0;
@@ -1212,17 +1238,16 @@ function calc(){
   const kwpNec=kwhPorKwp?alvoAno/kwhPorKwp:0;
   // módulo: o escolhido, ou o de menor custo total para a potência necessária
   const nPar=w=>{let n=w?Math.max(Math.ceil(kwpNec*1000/w-1e-9),alvoAno>0?1:0):0;return n%2?n+1:n};
-  const escolhido=CAT.modulos.find(x=>x.id===$("modulo").value)||CAT.modulos.slice().sort((a,b)=>nPar(a.wp)*a.preco-nPar(b.wp)*b.preco||b.wp-a.wp)[0];
-  if(!$("modulo").value){$("wp").value=escolhido.wp;$("area").value=escolhido.area;if($("modComp")){$("modComp").value=escolhido.comp;$("modLarg").value=escolhido.larg}}
-  const mod={...escolhido};
-  mod.wp=+$("wp").value||mod.wp;
-  const wp=mod.wp, aMod=+$("area").value||mod.area||2.7;
+  const mod=resolverModulo(nPar);
+  $("wp").value=mod.wp;$("area").value=mod.area;if($("modComp")){$("modComp").value=mod.comp;$("modLarg").value=mod.larg}
+  const wp=mod.wp, aMod=mod.area||2.7;
   let nMod=wp?Math.max(Math.ceil(kwpNec*1000/wp-1e-9),alvoAno>0?1:0):0;
   if(nMod%2)nMod++; // módulos sempre em pares por MPPT
   const kwp=nMod*wp/1000, area=nMod*aMod*1.15;
   const base={pr,fOri,somb,prEf,telhado,simP:{kwp,hsp12,cons12,disp,tar,cip,simult}};
   const ops={string:financeiro(montarOpcao("string",nMod,mod,c,telhado),c,base,nMod),
              micro:financeiro(montarOpcao("micro",nMod,mod,c,telhado),c,base,nMod)};
+  if($("wizMini"))$("wizMini").innerHTML=`Sistema: <b>${num(nMod*wp/1000,2)} kWp</b> · ${nMod} módulos de ${wp} W`;
   last={c,mod,hsp,tar,wp,pr,prEf,fOri,somb,disp,cip,simult,cons12,consMed,alvoAno,kwhPorKwp,kwpNec,nMod,kwp,area,telhado,telInf,estr,ops,sel:ops[state.opc],AR};
   if(typeof arranjar==="function"){const r=arranjar(nMod),dep=calc._d||0;
     if(r&&ARR.usar&&r.n>0&&r.todasComQueda&&dep<3&&(!AR||Math.abs(r.fOri-AR.fOri)>0.003)){calc._d=dep+1;try{calc()}finally{calc._d=dep}return}}
@@ -1371,7 +1396,7 @@ Valores estimados, já considerando o custo mínimo da distribuidora e a cobran�
 $("limpar").onclick=()=>{
   $("cliente").value="";$("cliTel").value="";$("cliEmail").value="";ufSel.value="DF";preencherHSP("DF");$("consumo").value=600;$("conta").value=550;$("tarifa").value=1.10;
   $("cip").value=0;$("simult").value="0.35";$("ori").value="0";$("incl").value="15";$("somb").value=0;
-  $("telhado").value="nd";$("madeira").value="nd";$("modulo").value="";aplicarModulo();
+  $("telhado").value="nd";$("madeira").value="nd";$("modulo").value="";$("modPot").value="";aplicarModulo();
   $("pr").value=0.80;$("cob").value=100;$("endereco").value="";$("coord").value="";atualizarLoc(false);$("satRem").click();
   document.querySelectorAll(".mes").forEach(e=>e.value=600);calc();toast("Valores restaurados");
 };
@@ -1421,10 +1446,10 @@ function lerImagem(file,cb){
   if(!file||!/^image\//.test(file.type)){toast("Arquivo não é uma imagem");return}
   const fr=new FileReader();
   fr.onload=()=>{const im=new Image();im.onload=()=>{
-    const k=Math.min(1,1600/Math.max(im.width,im.height));const cv=document.createElement("canvas");
+    const k=Math.min(1,2600/Math.max(im.width,im.height));const cv=document.createElement("canvas");
     cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);
-    const cx=cv.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(im,0,0,cv.width,cv.height);
-    cb({url:cv.toDataURL("image/jpeg",0.88),w:cv.width,h:cv.height,el:im})};
+    const cx=cv.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.drawImage(im,0,0,cv.width,cv.height);
+    cb({url:cv.toDataURL("image/jpeg",0.95),w:cv.width,h:cv.height,el:im})};
     im.onerror=()=>toast("Não foi possível ler a imagem");im.src=fr.result};
   fr.readAsDataURL(file);
 }
@@ -1664,7 +1689,7 @@ async function capturarTiles(camadas,x0,y0,W,H,z){ // recorte em pixels globais 
     await Promise.all(jobs)}
   ctx.font="11px Helvetica";ctx.fillStyle="rgba(255,255,255,.85)";ctx.fillRect(cv.width-196,cv.height-16,196,16);ctx.fillStyle="#333";ctx.fillText("Imagens © Esri, Maxar, Earthstar Geographics",cv.width-192,cv.height-4);
   return cv}
-const canvasParaArquivo=cv=>new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(new File([b],"mapa.jpg",{type:"image/jpeg"})):rej(new Error("imagem bloqueada")),"image/jpeg",0.9)}catch(e){rej(e)}});
+const canvasParaArquivo=cv=>new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(new File([b],"mapa.jpg",{type:"image/jpeg"})):rej(new Error("imagem bloqueada")),"image/jpeg",0.96)}catch(e){rej(e)}});
 async function baixarImg(u){const r=await fetch(u);if(!r.ok)throw new Error("Google respondeu "+r.status);const b=await r.blob();
   if(!/^image\//.test(b.type))throw new Error("resposta inválida do Google");return new File([b],"google.png",{type:b.type})}
 function aplicarImagens(satFile,mppOrig,larguraOrig,mapaFile,pin){
@@ -1687,9 +1712,9 @@ $("gImagens").onclick=async()=>{
         baixarImg(`${B}?center=${p.lat()},${p.lng()}&zoom=17&size=640x440&scale=2&maptype=hybrid&markers=color:red%7C${p.lat()},${p.lng()}&language=pt-BR&region=BR&key=${k}`)]);
       aplicarImagens(fs,mpp(c.lat(),z)/2,w*2,fl,null)}
     else{
-      const b=MP.map.getBounds(),zv=MP.map.getZoom();let z=Math.min(19,zv+1);
+      const b=MP.map.getBounds();let z=19;
       const lim=()=>({x0:lon2x(b.getWest(),z),y0:lat2y(b.getNorth(),z),x1:lon2x(b.getEast(),z),y1:lat2y(b.getSouth(),z)});
-      let r=lim();while((r.x1-r.x0)>2200&&z>12){z--;r=lim()}
+      let r=lim();while((r.x1-r.x0)>2600&&z>12){z--;r=lim()}
       const sat=await capturarTiles([T_SAT],r.x0,r.y0,r.x1-r.x0,r.y1-r.y0,z);
       const p=MP.mk.getLatLng(),zl=17,px=lon2x(p.lng,zl),py=lat2y(p.lat,zl),LW=1280,LH=880;
       const loc=await capturarTiles([T_SAT,T_RUAS,T_NOMES],px-LW/2,py-LH/2,LW,LH,zl);
@@ -1866,7 +1891,7 @@ function caminho(ctx,p){ctx.beginPath();p.forEach((q,i)=>i?ctx.lineTo(q[0],q[1])
 function desenharCena(ctx,k,ui,semUI){
   const W=ARR.fundo.w,H=ARR.fundo.h,lw=x=>x*ui;
   ctx.setTransform(k,0,0,k,0,0);ctx.clearRect(0,0,W,H);
-  if(ARR.img&&ARR.img.complete&&ARR.img.naturalWidth)ctx.drawImage(ARR.img,0,0,W,H);
+  if(ARR.img&&ARR.img.complete&&ARR.img.naturalWidth){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.drawImage(ARR.img,0,0,W,H)}
   const cfg=arrCfg();
   // áreas: faixa de afastamento (laranja) + área útil (roxa)
   ARR.areas.forEach((A,i)=>{if(A.pts.length<3)return;
@@ -1930,8 +1955,8 @@ function desenharArr(){if(!ARR.fundo||_raf)return;
     cv.style.height=(cw*ARR.fundo.h/ARR.fundo.w)+"px";const k=cv.width/ARR.fundo.w;desenharCena(ctx,k,dpr/k)})}
 window.addEventListener("resize",desenharArr);
 function imagemArranjo(){const cv=document.createElement("canvas"),ctx=cv.getContext&&cv.getContext("2d");if(!ctx)return null;
-  const W=ARR.fundo.w,H=ARR.fundo.h,k=Math.min(1,1600/Math.max(W,H));cv.width=Math.round(W*k);cv.height=Math.round(H*k);
-  desenharCena(ctx,k,Math.max(W,H)/700,true);return {url:cv.toDataURL("image/jpeg",0.9),w:cv.width,h:cv.height}}
+  const W=ARR.fundo.w,H=ARR.fundo.h,k=Math.min(2,2400/Math.max(W,H));cv.width=Math.round(W*k);cv.height=Math.round(H*k);
+  desenharCena(ctx,k,Math.max(W,H)/700,true);return {url:cv.toDataURL("image/jpeg",0.93),w:cv.width,h:cv.height}}
 
 // ---------- status e listas ----------
 function arrStatus(){const el=$("arrRes");if(!el)return;const r=ARR.res,ch=[];
@@ -2407,7 +2432,6 @@ function irPasso(n,inicial){
   WIZ.atual=n;WIZ.max=Math.max(WIZ.max,n);
   WIZ.passos.forEach((p,i)=>p.classList.toggle("hidden",i!==n));
   document.querySelectorAll(".wiz-step").forEach((b,i)=>{b.classList.toggle("on",i===n);b.classList.toggle("ok",i<n||i<=WIZ.max&&i!==n)});
-  if(n===2&&last)$("wizMini").innerHTML=`Sistema: <b>${num(last.kwp,2)} kWp</b> · ${last.nMod} módulos de ${last.wp} W · ${esc(last.mod.nome.replace(/^Módulo /,""))}`;
   if(!inicial)try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){window.scrollTo(0,0)}
   setTimeout(()=>{window.dispatchEvent(new Event("resize"));
     try{if(MP.tipo==="esri"&&MP.map)MP.map.invalidateSize()}catch(e){}},60)}
