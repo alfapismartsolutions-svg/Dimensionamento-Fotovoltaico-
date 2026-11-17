@@ -272,8 +272,10 @@ input:disabled,select:disabled{opacity:.55}
         <div id="gmap" style="height:460px;border-radius:10px;margin-top:8px;border:1px solid var(--line);background:#ddd"></div>
         <div class="actions" style="margin-top:10px;align-items:center">
           <button class="btn mini" id="gImagens" type="button" style="background:var(--brand)">📸 Usar esta vista na proposta</button>
+          <button class="btn mini" id="gSolar" type="button" style="background:#f2a516;color:#152534">☀️ Analisar telhado (Google Solar API)</button>
           <a class="btn sec mini" id="gExterno" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Google Maps ↗</a>
         </div>
+        <div id="solarRes" class="contaSt hidden" style="margin-top:10px"></div>
         <div class="hint">Centralize e aproxime o telhado: a área visível vira a imagem do telhado (com escala para a disposição dos módulos) e o entorno do pino vira o mapa de localização da proposta.</div>
         <div class="hint" id="gProv" style="margin-top:4px"></div>
       </div>
@@ -401,7 +403,7 @@ input:disabled,select:disabled{opacity:.55}
     <h2>Google Maps</h2>
     <label>Chave de API do Google Maps</label>
     <div class="locrow"><input id="gKey" type="password" placeholder="AIza..." autocomplete="off"><button class="btn sec mini" id="gKeySalvar" type="button">Salvar</button></div>
-    <div class="hint">Fica salva só neste navegador. Ative na Google Cloud as APIs <b>Maps JavaScript</b>, <b>Geocoding</b> e <b>Maps Static</b> e restrinja a chave ao endereço do seu site.</div>
+    <div class="hint">Fica salva só neste navegador. Ative na Google Cloud as APIs <b>Maps JavaScript</b>, <b>Geocoding</b>, <b>Maps Static</b> e <b>Solar</b> e restrinja a chave ao endereço do seu site.</div>
     <h2 style="margin-top:22px">Premissas financeiras</h2>
     <div class="row">
       <div><label>Reajuste anual da tarifa (%)</label><input id="c-inf" type="number" step="0.1"></div>
@@ -1600,6 +1602,74 @@ $("gImagens").onclick=async()=>{
       aplicarImagens(fs,mpp(b.getCenter().lat,z),sat.width,fl,[0.5,0.5])}
   }catch(e){console.error(e);toast("Não foi possível capturar a imagem: "+e.message)}
   finally{bt.disabled=false;bt.textContent="📸 Usar esta vista na proposta"}};
+// ---- Google Solar API (buildingInsights) ----
+let SOLAR=null;
+function hullPts(pts){const p=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(p.length<3)return p;
+  const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),lo=[],up=[];
+  for(const q of p){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q)}
+  for(let i=p.length-1;i>=0;i--){const q=p[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q)}
+  up.pop();lo.pop();return lo.concat(up)}
+function posPino(){if(MP.tipo==="google"&&MP.mk){const p=MP.mk.getPosition();return {lat:p.lat(),lng:p.lng()}}
+  if(MP.tipo==="esri"&&MP.mk){const p=MP.mk.getLatLng();return {lat:p.lat,lng:p.lng}}return LOC}
+async function solarConsulta(lat,lng){
+  const k=gKey();if(!k)throw {msg:"Cadastre a chave do Google em Parâmetros de preço, com a <b>Solar API</b> ativada no Google Cloud."};
+  const tent=[{requiredQuality:"BASE",experiments:"EXPANDED_COVERAGE"},{requiredQuality:"BASE"},{requiredQuality:"LOW"},{}];let ult="";
+  for(const t of tent){
+    const q=new URLSearchParams({"location.latitude":lat.toFixed(6),"location.longitude":lng.toFixed(6),...t,key:k});
+    let r,j={};try{r=await fetch("https://solar.googleapis.com/v1/buildingInsights:findClosest?"+q);j=await r.json().catch(()=>({}))}
+    catch(e){throw {msg:"Sem conexão com o Google Solar API."}}
+    if(r.ok&&j.solarPotential)return j;
+    ult=(j.error&&j.error.message)||("erro "+r.status);
+    if(r.status===401||r.status===403)throw {msg:"O Google negou o acesso: ative a <b>Solar API</b> no projeto da chave e libere o domínio do site. ("+esc(ult)+")"};
+  }
+  throw {msg:"O Google não tem dados solares para este telhado (a cobertura no Brasil ainda é parcial). Use o desenho manual das áreas. <span style='font-size:11px'>("+esc(ult)+")</span>"}}
+function rendimentoGoogle(b,kwp){ // kWh/kWp·ano (CC) dos melhores painéis do Google para a potência dimensionada
+  const sp=b.solarPotential,cap=sp.panelCapacityWatts||400,n=Math.max(1,Math.min(sp.solarPanels?sp.solarPanels.length:0,Math.round(kwp*1000/cap)));
+  if(!sp.solarPanels||!sp.solarPanels.length)return null;return soma(sp.solarPanels.slice(0,n).map(p=>p.yearlyEnergyDcKwh||0))/(n*cap/1000)}
+function mostrarSolar(b){
+  const sp=b.solarPotential,segs=sp.roofSegmentStats||[],d=b.imageryDate||{},rend=rendimentoGoogle(b,last?last.kwp:5);
+  const cont={};(sp.solarPanels||[]).forEach(p=>cont[p.segmentIndex]=(cont[p.segmentIndex]||0)+1);
+  const linhas=segs.map((g,i)=>({i,az:g.azimuthDegrees,pit:g.pitchDegrees,area:g.stats&&g.stats.areaMeters2,sol:g.stats&&g.stats.sunshineQuantiles?g.stats.sunshineQuantiles[5]:null,n:cont[i]||0}))
+    .filter(x=>x.area>4).sort((a,b)=>(b.sol||0)-(a.sol||0));
+  $("solarRes").classList.remove("hidden");
+  $("solarRes").innerHTML=`<b class="ok">✓ Telhado analisado pelo Google Solar API</b>
+    <div style="font-size:12px;color:var(--muted);margin:2px 0 6px">Qualidade da imagem: ${esc(b.imageryQuality||"-")} · imagem de ${d.month?String(d.month).padStart(2,"0")+"/"+d.year:"data não informada"} · até ${sp.maxArrayPanelsCount||0} painéis de ${sp.panelCapacityWatts||"?"} W (${num(sp.maxArrayAreaMeters2||0)} m²)</div>
+    <table style="font-size:12.5px"><tr><th>Água</th><th>Orientação</th><th class="r">Inclinação</th><th class="r">Área</th><th class="r">Sol/dia</th><th class="r">Painéis Google</th></tr>
+    ${linhas.map((x,k)=>`<tr><td>${k+1}</td><td>${dirNome(x.az)} (${Math.round(x.az)}°)</td><td class="r">${num(x.pit,0)}°</td><td class="r">${num(x.area||0,1)} m²</td><td class="r">${x.sol?num(x.sol/365,2)+" h":"–"}</td><td class="r">${x.n}</td></tr>`).join("")}</table>
+    ${rend?`<div style="margin-top:6px">Rendimento dos melhores pontos do telhado: <b>${num(rend)} kWh/kWp·ano</b> (≈ ${num(rend/365,2)} h de sol pleno/dia, já com orientação e sombras).</div>
+    <div class="actions" style="margin-top:6px"><button class="btn mini" type="button" id="solarAplicar">Usar essa irradiação no dimensionamento</button></div>`:""}
+    ${b._img?`<div style="font-size:11.5px;color:var(--muted);margin-top:6px">As áreas de instalação foram criadas na disposição dos módulos a partir das posições de painéis do Google; ajuste ou retire módulos se precisar.</div>`:`<div style="font-size:11.5px;color:var(--muted);margin-top:6px">Não foi possível baixar a imagem do telhado (ative a Maps Static API); desenhe as áreas manualmente.</div>`}`;
+  const bt=$("solarAplicar");if(bt)bt.onclick=()=>{
+    const r=rendimentoGoogle(SOLAR,last.kwp),hspNova=r/365,atual=soma(hspInputs.map(e=>+e.value||0))/12;
+    hspInputs.forEach(e=>e.value=((+e.value)*hspNova/atual).toFixed(2));$("hsp").value=hspNova.toFixed(2);
+    $("ori").value="0";$("incl").value="15";$("somb").value=0;ARR.usar=false;$("arrUsar").checked=false;
+    $("hspFonte").textContent="Irradiação do telhado calculada pelo Google Solar API (inclui orientação, inclinação e sombras).";
+    calc();toast("Irradiação do Google aplicada")}}
+async function aplicarSolarNaImagem(b){
+  const c=b.center||{},lat=c.latitude,lng=c.longitude,z=20,k=encodeURIComponent(gKey());
+  const fs=await baixarImg(`https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${z}&size=640x640&scale=2&maptype=satellite&key=${k}`);
+  await new Promise(res=>lerImagem(fs,img=>{SAT=img;$("satImg").src=SAT.url;$("satPrev").classList.remove("hidden");$("satZona").classList.add("hidden");$("satFonte").value="Imagem de satélite: Google";
+    arrNovaImagem();const kr=img.w/1280;ARR.escala=mpp(lat,z)/2/kr;ARR.norte=0;$("arrNorte").value=0;
+    const px=(la,lo)=>[(lon2x(lo,z)-lon2x(lng,z))*2*kr+img.w/2,(lat2y(la,z)-lat2y(lat,z))*2*kr+img.h/2];
+    const sp=b.solarPotential,segs=sp.roofSegmentStats||[],H=(sp.panelHeightMeters||1.879)/ARR.escala/2,Wd=(sp.panelWidthMeters||1.045)/ARR.escala/2;
+    const porSeg={};(sp.solarPanels||[]).forEach(p=>{(porSeg[p.segmentIndex]=porSeg[p.segmentIndex]||[]).push(p)});
+    const ordem=Object.keys(porSeg).map(Number).filter(i=>porSeg[i].length>=2&&segs[i])
+      .sort((a,b)=>soma(porSeg[b].map(p=>p.yearlyEnergyDcKwh))/porSeg[b].length-soma(porSeg[a].map(p=>p.yearlyEnergyDcKwh))/porSeg[a].length);
+    ordem.forEach(i=>{const g=segs[i],az=g.azimuthDegrees,dv=vecImg(az),u=[-dv[1],dv[0]],cs=[];
+      porSeg[i].forEach(p=>{const ctr=px(p.center.latitude,p.center.longitude),land=p.orientation==="LANDSCAPE",hu=land?H:Wd,hv=land?Wd:H;
+        [[1,1],[1,-1],[-1,-1],[-1,1]].forEach(([a,bb])=>cs.push([ctr[0]+u[0]*hu*a+dv[0]*hv*bb,ctr[1]+u[1]*hu*a+dv[1]*hv*bb]))});
+      const pts=hullPts(cs);if(pts.length>=3)ARR.areas.push({nome:"Área "+(ARR.areas.length+1),pts,tipo:g.pitchDegrees<5?"plana":"inclinada",
+        incl:Math.round(g.pitchDegrees<5?10:g.pitchDegrees),qImg:g.pitchDegrees<5?null:norm360(az),pos:"auto",removidos:[]})});
+    $("arrAfast").value=0.05;setModo("sel");renderListas();calc();res()}))}
+$("gSolar").onclick=async()=>{
+  const p=posPino();if(!p){toast("Posicione o pino sobre o telhado primeiro");return}
+  const bt=$("gSolar");bt.disabled=true;bt.textContent="⏳ Analisando o telhado…";$("solarRes").classList.add("hidden");
+  try{const b=await solarConsulta(p.lat,p.lng);SOLAR=b;
+    try{await aplicarSolarNaImagem(b);b._img=true}catch(e){console.warn(e);toast("Análise feita, mas não foi possível baixar a imagem do telhado")}
+    mostrarSolar(b)}
+  catch(e){console.error(e);$("solarRes").classList.remove("hidden");$("solarRes").innerHTML=`<span class="no">${e.msg||esc(e.message||String(e))}</span>`}
+  finally{bt.disabled=false;bt.textContent="☀️ Analisar telhado (Google Solar API)"}};
+
 gAtualizarUI();
 
 // =================== DISPOSIÇÃO DOS MÓDULOS ===================
