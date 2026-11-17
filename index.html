@@ -130,6 +130,20 @@ input:disabled,select:disabled{opacity:.55}
 .contaSt pre{white-space:pre-wrap;font-size:11px;max-height:220px;overflow:auto;background:#fff;border:1px solid var(--line);padding:8px;border-radius:8px}
 .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
 .pill{display:inline-block;background:var(--soft);border:1px solid #f6dc9c;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+.wiz-steps{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+.wiz-step{flex:1 1 180px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);cursor:pointer;font:inherit;font-weight:700;color:var(--muted);text-align:left}
+.wiz-step .b{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--line);color:var(--ink);font-size:13px}
+.wiz-step.on{border-color:var(--navy);color:var(--ink);box-shadow:0 2px 10px rgba(20,33,61,.10)}
+.wiz-step.on .b{background:var(--navy);color:#fff}
+.wiz-step.ok .b{background:#1f8a5b;color:#fff}
+.passo.lado .passo-c{display:grid;grid-template-columns:420px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.passo.lado .passo-c{grid-template-columns:1fr}}
+.passo:not(.lado) .passo-c>.card:first-child{margin-top:0}
+.passo-c .two{margin-top:18px}
+.two>.card{margin-top:0!important}
+.wiz-nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap}
+.wiz-mini{margin-top:12px;padding:10px 12px;background:var(--bg,#f4f6fa);border-radius:10px}
+@media(max-width:600px){.wiz-steps{flex-wrap:nowrap;gap:6px}.wiz-step{padding:8px}.wiz-step span:not(.b){display:none}.wiz-step{flex:0 0 auto}.wiz-step.on{flex:1 1 auto}.wiz-step.on span:not(.b){display:inline}.wiz-nav .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -229,15 +243,15 @@ input:disabled,select:disabled{opacity:.55}
     <div class="card">
       <h2><span class="n">3</span>Telhado e equipamentos</h2>
       <div class="row">
-        <div><label>Tipo de telhado</label><select id="telhado">
-          <option value="ceramico">Telha cerâmica</option><option value="fibro">Fibrocimento</option>
+        <div><label>Tipo de telhado <span style="font-weight:500">(opcional)</span></label><select id="telhado">
+          <option value="nd">Não sei</option><option value="ceramico">Telha cerâmica</option><option value="fibro">Fibrocimento</option>
           <option value="metalico">Telha metálica</option><option value="laje">Laje</option></select></div>
         <div><label>Estrutura do telhado <span style="font-weight:500">(opcional)</span></label><select id="madeira">
           <option value="nd">Não sei</option><option value="madeira">Madeira</option><option value="metal">Metálica (terças de aço)</option></select></div>
       </div>
       <div class="hint" id="estrHint"></div>
       <label>Módulo fotovoltaico</label>
-      <select id="modulo"></select>
+      <select id="modulo"><option value="">Menor custo</option></select>
       <div class="row">
         <div><label>Inversor string (opção 1)</label><select id="invMarca"><option value="">Menor custo</option></select></div>
         <div><label>Microinversor (opção 2)</label><select id="microSel"><option value="">Menor custo</option></select></div>
@@ -939,7 +953,7 @@ const CAT_DEF={
     {id:"han620",nome:"Módulo Hanersun HiTouch 620 W bifacial N-type",marca:"Hanersun",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:752.85,forn:"MeuGerador"},
     {id:"osda610",nome:"Módulo Osda ODA610-33V-MHDRZ 610 W bifacial",marca:"Osda",wp:610,area:2.71,comp:2.382,larg:1.134,voc:48.68,vmp:40.46,isc:15.96,bvoc:null,gar:"",preco:655.65,forn:"Minha Casa Solar"},
     {id:"jk620",nome:"Módulo Jinko Tiger Neo JKM620N-66HL4M-BDV 620 W bifacial",marca:"Jinko Solar",wp:620,area:2.70,comp:2.382,larg:1.134,voc:49.08,vmp:40.74,isc:16.08,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:929.00,forn:"Recarga Solar"},
-    {id:"tr605",nome:"Módulo Trina Vertex N TSM-605NEG19RC.20 605 W bifacial",marca:"Trina Solar",wp:605,area:2.70,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:652.00,forn:"Buyers Energy"}
+    {id:"tr605",nome:"Módulo Trina Vertex N TSM-605NEG19RC.20 605 W bifacial",marca:"Trina Solar",wp:605,area:2.70,comp:2.384,larg:1.134,voc:48.70,vmp:40.50,isc:15.83,bvoc:-0.24,gar:"12 anos produto · 30 anos desempenho",preco:652.00,forn:"Buyers Energy"}
   ],
   // vmax (V) e imax (A por MPPT) só quando confirmados no datasheet
   string:[
@@ -1035,7 +1049,8 @@ hspInputs.forEach(e=>e.addEventListener("input",()=>{$("hsp").value=(soma(hspInp
 CAT.modulos.forEach(m=>$("modulo").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome)} · ${brl(m.preco)}</option>`));
 [...new Set(CAT.string.map(i=>i.marca))].forEach(m=>$("invMarca").insertAdjacentHTML("beforeend",`<option value="${m}">${m}</option>`));
 CAT.micro.forEach(m=>$("microSel").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome.replace("Microinversor ",""))}</option>`));
-function aplicarModulo(){const m=CAT.modulos.find(x=>x.id===$("modulo").value);$("wp").value=m.wp;$("area").value=m.area;
+function aplicarModulo(){const auto=!$("modulo").value;["wp","area"].forEach(i=>$(i).readOnly=auto);
+  const m=CAT.modulos.find(x=>x.id===$("modulo").value)||CAT.modulos[0];$("wp").value=m.wp;$("area").value=m.area;
   if($("modComp")){$("modComp").value=m.comp;$("modLarg").value=m.larg}}
 $("modulo").addEventListener("change",aplicarModulo);aplicarModulo();
 ["invMarca","microSel"].forEach(i=>$(i).addEventListener("change",()=>calc()));
@@ -1176,17 +1191,15 @@ function financeiro(op,c,base,nMod){
 let last=null;
 function calc(){
   const c=readCfg();
-  const mod={...CAT.modulos.find(x=>x.id===$("modulo").value)};
-  mod.wp=+$("wp").value||mod.wp;
-  const tar=+$("tarifa").value||0, wp=mod.wp;
-  const pr=+$("pr").value||0.8, cob=(+$("cob").value||100)/100, aMod=+$("area").value||2.7;
+  const tar=+$("tarifa").value||0;
+  const pr=+$("pr").value||0.8, cob=(+$("cob").value||100)/100;
   const incl=+$("incl").value, ori=+$("ori").value, somb=Math.min(Math.max(+$("somb").value||0,0),95);
-  const telhado=$("telhado").value, estr=$("madeira").value;
+  const telInf=$("telhado").value, telhado=telInf==="nd"?"ceramico":telInf, estr=$("madeira").value;
   let fOri=fatorOri(incl,ori);
   const AR=arranjoAtivo();if(AR)fOri=AR.fOri;
   ["ori","incl"].forEach(i=>$(i).disabled=!!AR);
   $("fori").value=num(fOri*100)+"% do ótimo"+(AR?" (pelas áreas)":"");
-  $("estrHint").textContent=ESTR_NOTA[telhado][estr];
+  $("estrHint").textContent=telInf==="nd"?"Sem o tipo de telhado, o orçamento usa fixação para telha cerâmica (a mais comum). O suporte certo é confirmado na visita técnica.":ESTR_NOTA[telhado][estr];
   const prEf=pr*fOri*(1-somb/100);
   const hsp12=hspInputs.map(e=>+e.value||0), hsp=soma(hsp12)/12;
   const disp=state.lig, cip=+$("cip").value||0, simult=+$("simult").value;
@@ -1197,13 +1210,20 @@ function calc(){
   const alvoAno=soma(cons12.map(x=>Math.max(x-disp,0)))*cob;
   const kwhPorKwp=soma(hsp12.map((h,i)=>h*DIAS[i]))*prEf;
   const kwpNec=kwhPorKwp?alvoAno/kwhPorKwp:0;
+  // módulo: o escolhido, ou o de menor custo total para a potência necessária
+  const nPar=w=>{let n=w?Math.max(Math.ceil(kwpNec*1000/w-1e-9),alvoAno>0?1:0):0;return n%2?n+1:n};
+  const escolhido=CAT.modulos.find(x=>x.id===$("modulo").value)||CAT.modulos.slice().sort((a,b)=>nPar(a.wp)*a.preco-nPar(b.wp)*b.preco||b.wp-a.wp)[0];
+  if(!$("modulo").value){$("wp").value=escolhido.wp;$("area").value=escolhido.area;if($("modComp")){$("modComp").value=escolhido.comp;$("modLarg").value=escolhido.larg}}
+  const mod={...escolhido};
+  mod.wp=+$("wp").value||mod.wp;
+  const wp=mod.wp, aMod=+$("area").value||mod.area||2.7;
   let nMod=wp?Math.max(Math.ceil(kwpNec*1000/wp-1e-9),alvoAno>0?1:0):0;
   if(nMod%2)nMod++; // módulos sempre em pares por MPPT
   const kwp=nMod*wp/1000, area=nMod*aMod*1.15;
   const base={pr,fOri,somb,prEf,telhado,simP:{kwp,hsp12,cons12,disp,tar,cip,simult}};
   const ops={string:financeiro(montarOpcao("string",nMod,mod,c,telhado),c,base,nMod),
              micro:financeiro(montarOpcao("micro",nMod,mod,c,telhado),c,base,nMod)};
-  last={c,mod,hsp,tar,wp,pr,prEf,fOri,somb,disp,cip,simult,cons12,consMed,alvoAno,kwhPorKwp,kwpNec,nMod,kwp,area,telhado,estr,ops,sel:ops[state.opc],AR};
+  last={c,mod,hsp,tar,wp,pr,prEf,fOri,somb,disp,cip,simult,cons12,consMed,alvoAno,kwhPorKwp,kwpNec,nMod,kwp,area,telhado,telInf,estr,ops,sel:ops[state.opc],AR};
   if(typeof arranjar==="function"){const r=arranjar(nMod),dep=calc._d||0;
     if(r&&ARR.usar&&r.n>0&&r.todasComQueda&&dep<3&&(!AR||Math.abs(r.fOri-AR.fOri)>0.003)){calc._d=dep+1;try{calc()}finally{calc._d=dep}return}}
   render(last);
@@ -1224,7 +1244,7 @@ function render(d){
   $("k-pay").textContent=`À vista: ${brl(o.total*(1-d.c.desc/100))}`;
   $("anoRef").textContent=`· 1º ano (${d.c.ano}) · ${o.tipo==="micro"?"microinversor":"inversor string"}`;
 
-  const telNome={ceramico:"Telha cerâmica",fibro:"Fibrocimento",metalico:"Telha metálica",laje:"Laje"}[d.telhado];
+  const telNome=d.telInf==="nd"?"A confirmar (estimado: telha cerâmica)":{ceramico:"Telha cerâmica",fibro:"Fibrocimento",metalico:"Telha metálica",laje:"Laje"}[d.telhado];
   $("t-dim").innerHTML=rows([
     ["Consumo médio",num(d.consMed)+" kWh/mês"],
     ["Custo de disponibilidade",d.disp+" kWh/mês"],
@@ -1285,7 +1305,8 @@ function render(d){
   if(d.alvoAno<=0)al.push(["warn","Consumo igual ou abaixo do custo de disponibilidade: não há energia a compensar."]);
   if(d.fOri<0.9)al.push(["warn",`Orientação/inclinação desfavorável: o telhado produz ${num(d.fOri*100)}% do ideal, por isso foram necessários mais módulos.`]);
   if(d.somb>=15)al.push(["warn",`Sombreamento de ${num(d.somb)}%: o microinversor tende a ser a melhor opção.`]);
-  if(d.estr==="nd"&&(d.telhado==="ceramico"||d.telhado==="fibro"))al.push(["info","Estrutura do telhado não informada: o tipo de fixador será confirmado na visita técnica."]);
+  if(d.telInf==="nd")al.push(["info","Tipo de telhado não informado: a estrutura foi estimada para telha cerâmica e será confirmada na visita técnica."]);
+  else if(d.estr==="nd"&&(d.telhado==="ceramico"||d.telhado==="fibro"))al.push(["info","Estrutura do telhado não informada: o tipo de fixador será confirmado na visita técnica."]);
   const exc=d.alvoAno?(o.gerAno-soma(o.a1.map(r=>r.sim+r.comp)))/d.alvoAno:0;
   if(exc>0.20&&(+$("cob").value||100)>100)al.push(["warn",`Geração ${num(exc*100)}% acima do que o cliente consegue compensar: sobram ≈ ${num(o.saldoFim5)} kWh de créditos em 5 anos (expiram após 60 meses). Considere reduzir a cobertura.`]);
   $("alerts").innerHTML=al.map(a=>`<div class="alert ${a[0]==='ok'?'ok':''}" ${a[0]==='info'?'style="background:#eef2fa;border-color:#c9d1e3;color:#14213d"':''}>${a[1]}</div>`).join("");
@@ -1320,7 +1341,7 @@ function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");setTi
 $("copiar").onclick=async()=>{
   if(!contatoOk())return;registrarLead("Resumo copiado");
   const d=last,o=d.sel;const cli=$("cliente").value.trim();
-  const ori=$("ori").selectedOptions[0].textContent, incl=$("incl").selectedOptions[0].textContent, tel=$("telhado").selectedOptions[0].textContent;
+  const ori=$("ori").selectedOptions[0].textContent, incl=$("incl").selectedOptions[0].textContent, tel=$("telhado").value==="nd"?"a confirmar na visita técnica":$("telhado").selectedOptions[0].textContent;
   const S=d.ops.string,Mi=d.ops.micro;
   const equip=op=>op.itens.filter(i=>!i.cabo).map(i=>`• ${i.q}× ${i.desc}`).join("\n");
   const txt=`PRÉ-SIMULAÇÃO DE SISTEMA FOTOVOLTAICO${cli?"\nCliente: "+cli:""}
@@ -1350,7 +1371,7 @@ Valores estimados, já considerando o custo mínimo da distribuidora e a cobran�
 $("limpar").onclick=()=>{
   $("cliente").value="";$("cliTel").value="";$("cliEmail").value="";ufSel.value="DF";preencherHSP("DF");$("consumo").value=600;$("conta").value=550;$("tarifa").value=1.10;
   $("cip").value=0;$("simult").value="0.35";$("ori").value="0";$("incl").value="15";$("somb").value=0;
-  $("telhado").value="ceramico";$("madeira").value="nd";$("modulo").value=CAT.modulos[0].id;aplicarModulo();
+  $("telhado").value="nd";$("madeira").value="nd";$("modulo").value="";aplicarModulo();
   $("pr").value=0.80;$("cob").value=100;$("endereco").value="";$("coord").value="";atualizarLoc(false);$("satRem").click();
   document.querySelectorAll(".mes").forEach(e=>e.value=600);calc();toast("Valores restaurados");
 };
@@ -1556,9 +1577,9 @@ async function geocodificar(end,tipo){
 async function posInicial(tipo){
   if(LOC)return {lat:LOC.lat,lng:LOC.lng,z:19,msg:"Pino nas coordenadas informadas."};
   const end=$("endereco").value.trim(),cap=CAPITAIS[ufSel.value];
-  if(!end)return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Sem endereço: navegue até o imóvel e clique no telhado.</span>'};
+  if(!end)return {padrao:true,lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Sem endereço: navegue até o imóvel e clique no telhado.</span>'};
   const g=await geocodificar(end,tipo);if(g)return g;
-  return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Endereço não encontrado: navegue até o imóvel e clique no telhado.</span>'}}
+  return {padrao:true,lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Endereço não encontrado: navegue até o imóvel e clique no telhado.</span>'}}
 function mapaReserva(motivo){ // mapa do Google incorporado (sem chave) quando o interativo não carrega
   const end=$("endereco").value.trim(),q=LOC?`${LOC.lat},${LOC.lng}`:(end?end+", ":"")+ufSel.value+", Brasil";
   MP.map=null;MP.mk=null;MP.tipo="iframe";
@@ -1599,10 +1620,11 @@ async function localizarNoMapa(ev){
       MP.map.on("click",e=>{MP.mk.setLatLng(e.latlng);definirPos(e.latlng.lat,e.latlng.lng)})}
     MP.tipo=tipo;
     const doEnd=!LOC&&!!$("endereco").value.trim();
-    const p=auto&&!LOC&&!$("endereco").value.trim()?{lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2],z:11,msg:"Informe o endereço ou as coordenadas no passo 1 e clique em 📍 Localizar no mapa, ou navegue e clique no telhado."}:await posInicial(tipo);
+    const p=auto&&!LOC&&!$("endereco").value.trim()?{padrao:true,lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2],z:11,msg:"Informe o endereço ou as coordenadas no passo 1 e clique em 📍 Localizar no mapa, ou navegue e clique no telhado."}:await posInicial(tipo);
     if(tipo==="google"){MP.map.setCenter({lat:p.lat,lng:p.lng});MP.map.setZoom(p.z);MP.mk.setPosition({lat:p.lat,lng:p.lng})}
     else{MP.map.setView([p.lat,p.lng],p.z);MP.mk.setLatLng([p.lat,p.lng]);setTimeout(()=>MP.map.invalidateSize(),200)}
-    definirPos(p.lat,p.lng);if(doEnd)endAuto=true;
+    if(p.padrao)endAuto=true; // só posiciona o mapa; o endereço digitado depois ainda move o pino
+    else{definirPos(p.lat,p.lng);if(doEnd)endAuto=true}
     $("gMsg").innerHTML=p.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
     $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":(gKey()?"O Google não aceitou a chave; mostrando o mapa alternativo (imagens Esri). Confira as APIs ativadas e a restrição de domínio da chave.":"Mapa sem chave: imagens Esri. Para usar as imagens do Google, salve a chave no quadro acima.");
   }catch(e){console.error(e);mapaReserva(e.message||"erro")}}
@@ -2117,7 +2139,7 @@ function gerarPDF(){
 
   // 1. sistema
   secao(sn()+"Sistema proposto",50);
-  const tel=$("telhado").selectedOptions[0].textContent, oriT=$("ori").selectedOptions[0].textContent, inclT=$("incl").selectedOptions[0].textContent;
+  const tel=$("telhado").value==="nd"?"A confirmar na visita técnica":$("telhado").selectedOptions[0].textContent, oriT=$("ori").selectedOptions[0].textContent, inclT=$("incl").selectedOptions[0].textContent;
   tabela({body:P([
     ["Consumo médio informado",num(d.consMed)+" kWh/mês"],
     ["Energia a ser compensada",num(d.alvoAno/12)+" kWh/mês (descontado o custo de disponibilidade de "+d.disp+" kWh)"],
@@ -2292,7 +2314,7 @@ function registrarLead(origem){
   const o1=d.ops&&d.ops.string,o2=d.ops&&d.ops.micro,agora=new Date();
   const L={data:agora.toLocaleString("pt-BR"),ts:agora.getTime(),nome:$("cliente").value.trim(),telefone:$("cliTel").value.trim(),email:$("cliEmail").value.trim(),
     endereco:$("endereco").value.trim(),uf:$("uf").value,coordenadas:LOC?fmtCoord(LOC):"",consumo_kwh_mes:Math.round(d.consMed||0),
-    potencia_kwp:+(+d.kwp).toFixed(2),modulos:d.nMod,telhado:d.telhado,
+    potencia_kwp:+(+d.kwp).toFixed(2),modulos:d.nMod,telhado:d.telInf==="nd"?"não informado":d.telhado,
     invest_string:o1?Math.round(o1.total):"",invest_micro:o2?Math.round(o2.total):"",origem};
   const lista=store.get(LEADS_K)||[];
   const ult=lista[lista.length-1];
@@ -2348,6 +2370,48 @@ $("prevModal").addEventListener("click",e=>{if(e.target.id==="prevModal")fecharP
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("prevModal").classList.contains("hidden"))fecharPrev()});
 $("prevBaixar").onclick=()=>{if(!PREV)return;fecharPrev();
   try{const r=gerarPDF();r.doc.save(r.nomeArq);registrarLead("Proposta PDF");toast("Proposta gerada")}catch(e){console.error(e);toast("Erro ao gerar o PDF")}};
+// ---- Passo a passo (assistente) ----
+const WIZ={atual:0,max:0,passos:[]};
+(function montarAssistente(){
+  const sec=$("tab-sim"),grid=sec.querySelector(".grid"),card=id=>$(id).closest(".card");
+  const defs=[
+    {t:"Cliente e local",lado:true,els:[card("cliente"),$("cardMapa")]},
+    {t:"Consumo de energia",els:[card("consumo")]},
+    {t:"Telhado e equipamentos",lado:true,els:[card("telhado"),$("cardArr")]},
+    {t:"Resultado e proposta",els:[card("k-kwp"),$("t-dim").closest(".two"),card("t-orc1"),card("ch-mes"),card("t-fin"),card("t-conta")]}];
+  const bar=document.createElement("div");bar.className="wiz-steps";
+  defs.forEach((d,i)=>{const b=document.createElement("button");b.type="button";b.className="wiz-step";b.innerHTML=`<span class="b">${i+1}</span><span>${d.t}</span>`;b.onclick=()=>irPasso(i);bar.appendChild(b)});
+  sec.insertBefore(bar,grid);
+  defs.forEach((d,i)=>{
+    const p=document.createElement("div");p.className="passo"+(d.lado?" lado":"");
+    const cont=document.createElement("div");cont.className="passo-c";
+    d.els.forEach(e=>{e.style.marginTop="";cont.appendChild(e)});
+    if(d.lado){const a=document.createElement("div"),b=document.createElement("div");a.appendChild(d.els[0]);b.appendChild(d.els[1]);cont.append(a,b)}
+    p.appendChild(cont);
+    const nav=document.createElement("div");nav.className="wiz-nav";
+    nav.innerHTML=(i?`<button class="btn sec" type="button" data-v="-1">← Voltar</button>`:"<span></span>")+(i<defs.length-1?`<button class="btn" type="button" data-v="1">Próximo: ${defs[i+1].t} →</button>`:"");
+    nav.querySelectorAll("button").forEach(b=>b.onclick=()=>irPasso(WIZ.atual+(+b.dataset.v)));
+    p.appendChild(nav);sec.insertBefore(p,grid);WIZ.passos.push(p)});
+  grid.remove();
+  // o resumo do sistema aparece também no passo 3, para acompanhar o efeito das escolhas
+  const mini=document.createElement("div");mini.className="hint wiz-mini";mini.id="wizMini";card("telhado").appendChild(mini);
+  irPasso(0,true);
+})();
+function validarPasso(i){
+  if(i===0)return contatoOk();
+  if(i===1){if(!last||!(last.consMed>0)){toast("Informe o consumo de energia");return false}}
+  return true}
+function irPasso(n,inicial){
+  n=Math.max(0,Math.min(WIZ.passos.length-1,n));
+  for(let k=WIZ.atual;k<n;k++){if(!validarPasso(k)){n=k;break}}
+  WIZ.atual=n;WIZ.max=Math.max(WIZ.max,n);
+  WIZ.passos.forEach((p,i)=>p.classList.toggle("hidden",i!==n));
+  document.querySelectorAll(".wiz-step").forEach((b,i)=>{b.classList.toggle("on",i===n);b.classList.toggle("ok",i<n||i<=WIZ.max&&i!==n)});
+  if(n===2&&last)$("wizMini").innerHTML=`Sistema: <b>${num(last.kwp,2)} kWp</b> · ${last.nMod} módulos de ${last.wp} W · ${esc(last.mod.nome.replace(/^Módulo /,""))}`;
+  if(!inicial)try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){window.scrollTo(0,0)}
+  setTimeout(()=>{window.dispatchEvent(new Event("resize"));
+    try{if(MP.tipo==="esri"&&MP.map)MP.map.invalidateSize()}catch(e){}},60)}
+$("limpar").addEventListener("click",()=>irPasso(0));
 window.__gerarPDF=gerarPDF;
 </script>
 </body>
