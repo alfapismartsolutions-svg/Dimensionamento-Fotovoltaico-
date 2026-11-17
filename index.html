@@ -159,7 +159,7 @@ input:disabled,select:disabled{opacity:.55}
         <div><label>Telefone / WhatsApp</label><input id="cliTel" type="tel" inputmode="tel" placeholder="(61) 9 0000-0000"></div>
         <div><label>E-mail</label><input id="cliEmail" type="email" inputmode="email" placeholder="nome@email.com"></div>
       </div>
-      <div class="hint">Informe o telefone ou o e-mail para gerar a proposta. A ALFAPI usa esses dados só para retornar sobre este orçamento.</div>
+      <div class="hint">Informe o telefone ou o e-mail para ver ou gerar a proposta. A ALFAPI usa esses dados só para retornar sobre este orçamento.</div>
       <label>Endereço / cidade <span style="font-weight:500">(opcional)</span></label>
       <input id="endereco" placeholder="Ex.: SHIS QI 15, Lago Sul – Brasília">
       <label>Localização <span style="font-weight:500">(coordenadas ou link do Google Maps)</span></label>
@@ -240,7 +240,7 @@ input:disabled,select:disabled{opacity:.55}
       <select id="modulo"></select>
       <div class="row">
         <div><label>Inversor string (opção 1)</label><select id="invMarca"><option value="">Menor custo</option></select></div>
-        <div><label>Microinversor (opção 2)</label><select id="microSel"></select></div>
+        <div><label>Microinversor (opção 2)</label><select id="microSel"><option value="">Menor custo</option></select></div>
       </div>
       <div class="row">
         <div><label>Potência do módulo (W)</label><input id="wp" type="number"></div>
@@ -1087,7 +1087,7 @@ function montarOpcao(tipo,nMod,mod,c,telhado){
   itens.push({desc:mod.nome,forn:mod.forn,q:nMod,un:mod.preco});
   let inv=[];
   if(tipo==="string"){inv=escolherString(nMod*mod.wp/1000,c,state.lig===100);inv.forEach(x=>itens.push({desc:x.it.nome,forn:x.it.forn,q:x.q,un:x.it.preco,inv:true}))}
-  else{const m=CAT.micro.find(x=>x.id===$("microSel").value)||CAT.micro[0];const q=Math.ceil(nMod/m.mods);inv=[{it:m,q}];itens.push({desc:m.nome,forn:m.forn,q,un:m.preco,inv:true})}
+  else{const m=CAT.micro.find(x=>x.id===$("microSel").value)||CAT.micro.slice().sort((a,b)=>Math.ceil(nMod/a.mods)*a.preco-Math.ceil(nMod/b.mods)*b.preco)[0];const q=Math.ceil(nMod/m.mods);inv=[{it:m,q}];itens.push({desc:m.nome,forn:m.forn,q,un:m.preco,inv:true})}
   const e=CAT.estrutura.find(x=>x.id===telhado);const qe=Math.ceil(nMod/e.mods);
   itens.push({desc:e.nome,forn:e.forn,q:qe,un:e.preco});
   // strings por MPPT (módulos sempre em pares)
@@ -2319,11 +2319,11 @@ async function preVisualizar(){
   }catch(e){console.warn(e); // sem pdf.js: usa o visualizador do navegador
     corpo.innerHTML=`<iframe title="Proposta" src="${r.doc.output("bloburl")}" style="width:100%;height:100%;min-height:75vh;border:0;background:#fff;border-radius:4px"></iframe>`}}
 function fecharPrev(){$("prevModal").classList.add("hidden");document.body.style.overflow="";$("prevCorpo").innerHTML=""}
-$("pdfPrev").onclick=preVisualizar;
+$("pdfPrev").onclick=()=>{if(!contatoOk())return;registrarLead("Pré-visualização");preVisualizar()};
 $("prevFechar").onclick=fecharPrev;
 $("prevModal").addEventListener("click",e=>{if(e.target.id==="prevModal")fecharPrev()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("prevModal").classList.contains("hidden"))fecharPrev()});
-$("prevBaixar").onclick=()=>{if(!PREV)return;fecharPrev();if(!contatoOk())return;
+$("prevBaixar").onclick=()=>{if(!PREV)return;fecharPrev();
   try{const r=gerarPDF();r.doc.save(r.nomeArq);registrarLead("Proposta PDF");toast("Proposta gerada")}catch(e){console.error(e);toast("Erro ao gerar o PDF")}};
 window.__gerarPDF=gerarPDF;
 </script>
