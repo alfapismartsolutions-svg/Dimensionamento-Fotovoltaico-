@@ -262,19 +262,16 @@ input:disabled,select:disabled{opacity:.55}
 
     <div class="card" id="cardMapa" style="margin-top:18px">
       <h2>Localização no mapa</h2>
-      <div id="gSemChave" class="hint">Clique em <b>📍 Localizar no mapa</b> no passo 1 para ver o imóvel no satélite do Google.</div>
-      <div id="gEmbedBox" class="hidden">
-        <div class="hint" id="gEmbedMsg"></div>
-        <iframe id="gEmbed" title="Mapa do imóvel" style="width:100%;height:420px;border:1px solid var(--line);border-radius:10px;margin-top:8px" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-      </div>
+      <div id="gSemChave" class="hint">Informe o endereço ou as coordenadas no passo 1 e clique em <b>📍 Localizar no mapa</b>.</div>
       <div id="gBox" class="hidden">
-        <div class="hint" id="gMsg">Arraste o pino até o telhado do cliente (ou clique no mapa).</div>
-        <div id="gmap" style="height:420px;border-radius:10px;margin-top:8px;border:1px solid var(--line)"></div>
-        <div class="locrow" style="margin-top:10px;grid-template-columns:auto auto 1fr;gap:10px">
-          <label class="ninl">Zoom da imagem do telhado <select id="gZoom" style="width:auto"><option value="19">19 (prédios grandes)</option><option value="20" selected>20 (casas)</option><option value="21">21 (máximo)</option></select></label>
-          <button class="btn mini" id="gImagens" type="button" style="background:var(--brand)">Gerar imagens para a proposta</button><span></span>
+        <div class="hint" id="gMsg"></div>
+        <div id="gmap" style="height:460px;border-radius:10px;margin-top:8px;border:1px solid var(--line);background:#ddd"></div>
+        <div class="actions" style="margin-top:10px;align-items:center">
+          <button class="btn mini" id="gImagens" type="button" style="background:var(--brand)">📸 Usar esta vista na proposta</button>
+          <a class="btn sec mini" id="gExterno" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Google Maps ↗</a>
         </div>
-        <div class="hint">Gera o mapa de localização com o pino e a imagem de satélite do telhado com a escala já calibrada para a disposição dos módulos.</div>
+        <div class="hint">Centralize e aproxime o telhado: a área visível vira a imagem do telhado (com escala para a disposição dos módulos) e o entorno do pino vira o mapa de localização da proposta.</div>
+        <div class="hint" id="gProv" style="margin-top:4px"></div>
       </div>
     </div>
 
@@ -388,7 +385,7 @@ input:disabled,select:disabled{opacity:.55}
       <div><label>Materiais CA / proteção (R$)</label><input id="c-ca" type="number"></div>
     </div>
     <div class="row">
-      <div><label>Cabos CC + conectores (R$/módulo)</label><input id="c-cc" type="number"></div>
+      <div><label>Distância dos módulos ao inversor (m)</label><input id="c-dist" type="number"></div>
       <div><label>Frete (% sobre equipamentos)</label><input id="c-frete" type="number" step="0.5"></div>
     </div>
     <div class="row">
@@ -433,6 +430,13 @@ input:disabled,select:disabled{opacity:.55}
       <div><label>Troca do microinversor no ano</label><input id="c-trocaM" type="number"></div>
     </div>
     <div class="hint">Custo da troca = preço atual do equipamento, entra no fluxo de caixa. Use 0 para não considerar.</div>
+    <h3>Strings e conectores</h3>
+    <div class="row3">
+      <div><label>Mín. módulos/string</label><input id="c-strMin" type="number"></div>
+      <div><label>Máx. módulos/string</label><input id="c-strMax" type="number"></div>
+      <div><label>Pares MC4 de reserva</label><input id="c-mc4res" type="number"></div>
+    </div>
+    <div class="hint">Os módulos são distribuídos em pares entre as MPPTs. Cada string leva um cabo vermelho e um preto do arranjo até o inversor (distância + 3 m de folga) e 2 pares de MC4 (saída dos módulos e entrada no inversor). O máximo por string deve respeitar a tensão máxima do inversor.</div>
     <label>Ganho de geração do microinversor (%)</label>
     <input id="c-ganhoM" type="number" step="0.5">
     <div class="hint">MPPT por módulo reduz perdas por descasamento. Com sombreamento, o micro recupera ainda cerca de metade da perda informada.</div>
@@ -886,12 +890,17 @@ const CAT_DEF={
     {id:"han620",nome:"Módulo Hanersun HiTouch 620 W bifacial N-type",wp:620,area:2.71,comp:2.382,larg:1.134,preco:752.85,forn:"MeuGerador"}
   ],
   string:[
-    {id:"gw5",nome:"Inversor Growatt MIN5000TL-X2 5 kW 220 V 2 MPPT",kw:5,tri:false,preco:2143.22,forn:"MeuGerador"},
-    {id:"gw8",nome:"Inversor Growatt MIN8000TL-X2 8 kW 220 V 3 MPPT",kw:8,tri:false,preco:3624.71,forn:"MeuGerador"},
-    {id:"gw15",nome:"Inversor Growatt MID15KTL3-X 15 kW 380 V trifásico 4 MPPT",kw:15,tri:true,preco:5831.10,forn:"Minha Casa Solar"}
+    {id:"gw5",nome:"Inversor Growatt MIN5000TL-X2 5 kW 220 V 2 MPPT",kw:5,mppt:2,tri:false,preco:2143.22,forn:"MeuGerador"},
+    {id:"gw8",nome:"Inversor Growatt MIN8000TL-X2 8 kW 220 V 3 MPPT",kw:8,mppt:3,tri:false,preco:3624.71,forn:"MeuGerador"},
+    {id:"gw15",nome:"Inversor Growatt MID15KTL3-X 15 kW 380 V trifásico 4 MPPT",kw:15,mppt:4,tri:true,preco:5831.10,forn:"Minha Casa Solar"}
   ],
   micro:[
     {id:"hms2250",nome:"Microinversor Hoymiles HMS-2250DW-4T 2,25 kW 220 V Wi-Fi",kw:2.25,mods:4,preco:1386.87,forn:"MeuGerador"}
+  ],
+  cabos:[
+    {id:"cabo_vm",nome:"Cabo solar 4 mm² vermelho CABEL – bobina 50 m",preco:201.35,forn:"MeuGerador"},
+    {id:"cabo_pt",nome:"Cabo solar 4 mm² preto CABEL – bobina 50 m",preco:201.35,forn:"MeuGerador"},
+    {id:"mc4",nome:"Conector MC4 ProAuto – par macho + fêmea",preco:9.56,forn:"MeuGerador"}
   ],
   estrutura:[
     {id:"ceramico",nome:"Kit fixação Solar Group telha cerâmica – 4 módulos",mods:4,preco:459.00,forn:"Minha Casa Solar"},
@@ -907,7 +916,7 @@ const ESTR_NOTA={
   laje:{nd:"Triângulo com inclinação ajustável, fixado com chumbador na laje. Verificar impermeabilização.",madeira:"Triângulo com inclinação ajustável, fixado com chumbador na laje.",metal:"Triângulo com inclinação ajustável, fixado com chumbador na laje."}
 };
 const EMPRESA={nome:"ALFAPI Engenharia Energética",cnpj:"69.193.249/0001-67",tel:"(61) 98192-4639"};
-const CFG_DEF={validade:10,fornpdf:1,mo:150,momin:1800,momarg:35,moadic:15,proj:1200,ca:600,cc:60,frete:0,kitmarg:15,imp:6,inf:6,deg:0.5,
+const CFG_DEF={validade:10,fornpdf:1,mo:150,momin:1800,momarg:35,moadic:15,proj:1200,ca:600,dist:15,mc4res:2,strMax:12,strMin:4,frete:0,kitmarg:15,imp:6,inf:6,deg:0.5,
   fiobrs:0.1245,ano:2027,juros:1.59,prazos:"36,60,84",desc:5,over:30,trocaS:13,trocaM:0,ganhoM:2};
 
 // =================== UTILITÁRIOS ===================
@@ -925,7 +934,7 @@ const CAT_KEY="fv_cat_v1";
 let CAT=JSON.parse(JSON.stringify(CAT_DEF));
 (function(){const s=store.get(CAT_KEY);if(s)for(const g in CAT)CAT[g].forEach(it=>{const o=(s[g]||{})[it.id];if(o){it.preco=o.preco;it.forn=o.forn}})})();
 function salvarCat(){const o={};for(const g in CAT){o[g]={};CAT[g].forEach(it=>o[g][it.id]={preco:it.preco,forn:it.forn})}store.set(CAT_KEY,o)}
-const GRP={modulos:"Módulos",string:"Inversores string (parede)",micro:"Microinversores",estrutura:"Estruturas de fixação"};
+const GRP={modulos:"Módulos",string:"Inversores string (parede)",micro:"Microinversores",cabos:"Cabos e conectores",estrutura:"Estruturas de fixação"};
 function renderCat(){
   let h=`<tr><th>Equipamento</th><th style="width:170px">Fornecedor</th><th class="r" style="width:120px">Preço (R$)</th></tr>`;
   for(const g in CAT){h+=`<tr class="grp"><td colspan="3">${GRP[g]}</td></tr>`;
@@ -1013,11 +1022,25 @@ function montarOpcao(tipo,nMod,mod,c,telhado){
   else{const m=CAT.micro[0];const q=Math.ceil(nMod/m.mods);inv=[{it:m,q}];itens.push({desc:m.nome,forn:m.forn,q,un:m.preco,inv:true})}
   const e=CAT.estrutura.find(x=>x.id===telhado);const qe=Math.ceil(nMod/e.mods);
   itens.push({desc:e.nome,forn:e.forn,q:qe,un:e.preco});
-  itens.push({desc:"Cabos solares CC, conectores MC4 e acessórios",forn:"Diversos",q:nMod,un:c.cc});
+  // strings por MPPT (módulos sempre em pares)
+  let strings=[],aviso="";
+  if(tipo==="string"){
+    const mppt=soma(inv.map(x=>(x.it.mppt||1)*x.q));
+    let n=Math.max(1,Math.min(mppt,Math.floor(nMod/Math.max(2,c.strMin))));
+    const nMin=Math.ceil(nMod/Math.max(2,c.strMax));if(n<nMin){n=nMin;if(n>mppt)aviso=`${n} strings para ${mppt} MPPTs: haverá strings em paralelo na mesma MPPT (confira a corrente máxima).`}
+    const pares=nMod/2,base=Math.floor(pares/n),resto=pares%n;
+    strings=Array.from({length:n},(_,k)=>2*(base+(k<resto?1:0))).filter(x=>x>0)}
+  else strings=[];
+  const cab=k=>CAT.cabos.find(x=>x.id===k);
+  const metros=strings.length*(c.dist+3), bob=Math.ceil(metros/50);
+  if(bob>0){itens.push({desc:cab("cabo_vm").nome,forn:cab("cabo_vm").forn,q:bob,un:cab("cabo_vm").preco,cabo:true});
+    itens.push({desc:cab("cabo_pt").nome,forn:cab("cabo_pt").forn,q:bob,un:cab("cabo_pt").preco,cabo:true})}
+  const mc4=2*strings.length+c.mc4res;
+  if(mc4>0)itens.push({desc:cab("mc4").nome,forn:cab("mc4").forn,q:mc4,un:cab("mc4").preco,cabo:true});
   const equip=soma(itens.map(i=>i.q*i.un));
   const frete=equip*c.frete/100;
   const invKW=soma(inv.map(x=>x.it.kw*x.q)), invCusto=soma(inv.map(x=>x.it.preco*x.q));
-  return {tipo,itens,equip,frete,inv,invKW,invCusto};
+  return {tipo,itens,equip,frete,inv,invKW,invCusto,strings,metros,aviso};
 }
 
 // =================== SIMULAÇÃO MÊS A MÊS ===================
@@ -1066,7 +1089,7 @@ function financeiro(op,c,base,nMod){
   const eco25=soma(sim.map(r=>r.eco)), custoTroca=troca>0&&troca<=25?op.invCusto:0;
   const roi=total?(eco25-custoTroca-total)/total*100:0;
   const linhas=[
-    ...op.itens.map(i=>({desc:i.desc,forn:i.forn,q:i.q,v:i.q*i.un*(1+c.frete/100)*(1+c.kitmarg/100)})),
+    ...op.itens.map(i=>({desc:i.desc,forn:i.forn,q:i.q,cabo:!!i.cabo,v:i.q*i.un*(1+c.frete/100)*(1+c.kitmarg/100)})),
     {desc:"Instalação"+(adic?` (${base.telhado==="laje"?"laje":"telha cerâmica"})`:""),q:1,v:moVenda},
     {desc:"Projeto e homologação",q:1,v:c.proj},
     {desc:"Materiais CA e proteção (DPS, disjuntor, quadro)",q:1,v:c.ca},
@@ -1140,6 +1163,9 @@ function render(d){
     ["Potência instalada",num(d.kwp,2)+" kWp"],
     ["Inversor (opção 1)",invTxt(d.ops.string)],
     ["Relação CC/CA (opção 1)",d.ops.string.invKW?num(d.kwp/d.ops.string.invKW*100)+"%":"–"],
+    ["Strings por MPPT (opção 1)",d.ops.string.strings.map((n,k)=>`MPPT ${k+1}: ${n} mód.`).join(" · ")],
+    ["Cabos CC (opção 1)",`${d.ops.string.strings.length} × ${num(d.c.dist+3)} m = ${num(d.ops.string.metros)} m por cor → ${Math.ceil(d.ops.string.metros/50)} bobina(s) de 50 m vermelha + preta`],
+    ["Conectores MC4 (opção 1)",`${2*d.ops.string.strings.length} pares (2 por string) + ${d.c.mc4res} reserva`],
     ["Microinversores (opção 2)",invTxt(d.ops.micro)],
     ["Telhado",telNome],
     ["Área de telhado",`≈ ${num(d.area)} m²`],
@@ -1147,7 +1173,7 @@ function render(d){
 
   // orçamento: duas opções
   const S=d.ops.string,M=d.ops.micro;
-  const tabOrc=op=>{let h="";op.linhas.forEach(l=>h+=`<tr><td>${esc(l.desc)}${l.forn?`<span class="forn">Fornecedor: ${esc(l.forn)}</span>`:""}</td><td class="r">${l.q}</td><td class="r">${brl(l.v)}</td></tr>`);
+  const tabOrc=op=>{let h="",gr=false;op.linhas.forEach(l=>h+=(l.cabo&&!gr&&(gr=true)?`<tr><td colspan="3" style="background:#f0ede5;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px">Cabos e conectores</td></tr>`:"")+`<tr><td>${esc(l.desc)}${l.forn?`<span class="forn">Fornecedor: ${esc(l.forn)}</span>`:""}</td><td class="r">${l.q}</td><td class="r">${brl(l.v)}</td></tr>`);
     return h+`<tr class="tot"><td>Total</td><td></td><td class="r">${brl(op.total)}</td></tr><tr><td class="hint">À vista (${num(d.c.desc,1).replace(",0","")}% desc.) · ${brl2(d.kwp?op.total/(d.kwp*1000):0)}/Wp</td><td></td><td class="r hint">${brl(op.total*(1-d.c.desc/100))}</td></tr>`};
   $("t-orc1").innerHTML=tabOrc(S);$("t-orc2").innerHTML=tabOrc(M);
   $("opc1").classList.toggle("ref",o.tipo==="string");$("opc2").classList.toggle("ref",o.tipo==="micro");
@@ -1179,6 +1205,7 @@ function render(d){
   $("t-mes").innerHTML=tm;
 
   const al=[];
+  if(d.ops.string.aviso)al.push(["warn",d.ops.string.aviso]);
   if(d.disp!==100&&S.invKW>8)al.push(["warn",`Inversores somando ${num(S.invKW,1)} kW em ligação ${d.disp===30?"monofásica":"bifásica"}: confira o limite do padrão de entrada com a distribuidora. Acima disso, avalie mudar o padrão para trifásico.`]);
   if(o.tipo==="micro"&&d.disp===100&&o.inv[0].q>=3)al.push(["info",`${o.inv[0].q} microinversores monofásicos: distribuir entre as três fases para equilibrar a carga.`]);
   if(d.alvoAno<=0)al.push(["warn","Consumo igual ou abaixo do custo de disponibilidade: não há energia a compensar."]);
@@ -1220,7 +1247,7 @@ $("copiar").onclick=async()=>{
   const d=last,o=d.sel;const cli=$("cliente").value.trim();
   const ori=$("ori").selectedOptions[0].textContent, incl=$("incl").selectedOptions[0].textContent, tel=$("telhado").selectedOptions[0].textContent;
   const S=d.ops.string,Mi=d.ops.micro;
-  const equip=op=>op.itens.filter(i=>!/^Cabos/.test(i.desc)).map(i=>`• ${i.q}× ${i.desc}`).join("\n");
+  const equip=op=>op.itens.filter(i=>!i.cabo).map(i=>`• ${i.q}× ${i.desc}`).join("\n");
   const txt=`PRÉ-SIMULAÇÃO DE SISTEMA FOTOVOLTAICO${cli?"\nCliente: "+cli:""}
 
 Consumo médio: ${num(d.consMed)} kWh/mês
@@ -1354,7 +1381,7 @@ $("mapaRem").onclick=()=>{MAPA=null;$("mapaPrev").classList.add("hidden");$("map
 const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",PDFJS_W="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const TESS="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 function carregarScript(src){return new Promise((res,rej)=>{if(document.querySelector(`script[data-src="${src}"]`)){res();return}
-  const s=document.createElement("script");s.src=src;s.dataset.src=src;s.onload=res;s.onerror=()=>rej(new Error("sem conexão para carregar o leitor"));document.head.appendChild(s)})}
+  const s=document.createElement("script");s.src=src;s.dataset.src=src;s.onload=res;s.onerror=()=>rej(new Error("sem conexão com a internet"));document.head.appendChild(s)})}
 function contaMsg(h){const el=$("contaStatus");el.classList.remove("hidden");el.innerHTML=h}
 async function ocr(src){await carregarScript(TESS);
   const r=await Tesseract.recognize(src,"por",{logger:m=>{if(m.status==="recognizing text")contaMsg(`⏳ Lendo a foto da conta… ${Math.round(m.progress*100)}%`)}});return r.data.text}
@@ -1417,66 +1444,114 @@ async function lerConta(file){
       ?"Este visualizador bloqueia o leitor. Abra o simulador direto no navegador: baixe o arquivo <b>index.html</b> e dê dois cliques nele, ou use o endereço do site publicado."
       :`Verifique a conexão com a internet e tente de novo. <span style="font-size:11px;color:var(--muted)">(${esc(e.message||e)})</span>`))}}
 
-// =================== GOOGLE MAPS ===================
-const GKEY_K="fv_gmaps_key";let gMap=null,gMarker=null,_gLoad=null;
+// =================== MAPA (Google com chave · Esri sem chave) ===================
+const GKEY_K="fv_gmaps_key";let _gLoad=null,gFalhou=false;
+const MP={tipo:null,map:null,mk:null};
+const LEAF_JS="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",LEAF_CSS="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
+const T_SAT=ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",T_RUAS=ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",T_NOMES=ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 function gKey(){try{return localStorage.getItem(GKEY_K)||""}catch(e){return ""}}
 function gAtualizarUI(){if(gKey())$("gKey").value=gKey()}
-function mapaSimples(msg){ // mapa incorporado do Google, não precisa de chave
-  const end=$("endereco").value.trim();
-  const q=LOC?`${LOC.lat},${LOC.lng}`:end?end+", "+ufSel.value+", Brasil":"";
-  $("gBox").classList.add("hidden");$("gSemChave").classList.add("hidden");$("gEmbedBox").classList.remove("hidden");
-  if(!q){$("gEmbed").classList.add("hidden");$("gEmbedMsg").innerHTML='<span style="color:var(--warn)"><b>Informe o endereço ou as coordenadas no passo 1</b> e clique de novo em 📍 Localizar no mapa.</span>';
-    $("cardMapa").scrollIntoView({behavior:"smooth",block:"start"});return}
-  const link=LOC?`https://www.google.com/maps/@?api=1&map_action=map&center=${LOC.lat},${LOC.lng}&zoom=20&basemap=satellite`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
-  $("gEmbed").classList.remove("hidden");
-  $("gEmbed").src=`https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=k&z=${LOC?19:17}&hl=pt-BR&output=embed`;
-  const padrao='Mapa de satélite do Google. Para <b>arrastar o pino</b> e <b>gerar as imagens da proposta automaticamente</b>, cadastre a chave do Google Maps em <b>Parâmetros de preço</b>.';
-  $("gEmbedMsg").innerHTML=`<a class="btn mini" href="${link}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 0 6px;text-decoration:none">Abrir no Google Maps (nova aba) ↗</a><br>${msg||padrao}<br><span style="font-size:12px">Se o mapa abaixo ficar em branco, use o botão acima.</span>`;
-
-  $("cardMapa").scrollIntoView({behavior:"smooth",block:"start"})}
-$("gKeySalvar").onclick=()=>{try{localStorage.setItem(GKEY_K,$("gKey").value.trim())}catch(e){}_gLoad=null;gAtualizarUI();toast("Chave salva")};
+$("gKeySalvar").onclick=()=>{try{localStorage.setItem(GKEY_K,$("gKey").value.trim())}catch(e){}_gLoad=null;gFalhou=false;gAtualizarUI();toast("Chave salva")};
+function carregarCSS(h){if(document.querySelector(`link[href="${h}"]`))return;const l=document.createElement("link");l.rel="stylesheet";l.href=h;document.head.appendChild(l)}
 function carregarGoogle(){if(window.google&&google.maps&&google.maps.Map)return Promise.resolve();if(_gLoad)return _gLoad;
-  _gLoad=new Promise((res,rej)=>{const k=gKey();if(!k){rej(new Error("Cadastre a chave do Google Maps em Parâmetros"));return}
-    window.__gmInit=()=>res();window.gm_authFailure=()=>{mapaSimples('<span style="color:var(--warn)">O Google recusou a chave (confira as APIs ativadas e o endereço do site liberado na chave). Mostrando o mapa básico.</span>');$("gMsg").innerHTML='<span style="color:var(--warn)">O Google recusou a chave. Confira se Maps JavaScript, Geocoding e Maps Static estão ativadas e se o endereço do site está liberado.</span>'};
+  _gLoad=new Promise((res,rej)=>{const k=gKey();if(!k){rej(new Error("sem chave"));return}
+    window.__gmInit=()=>res();window.gm_authFailure=()=>{gFalhou=true;toast("O Google recusou a chave — usando o mapa alternativo");localizarNoMapa()};
     const s=document.createElement("script");s.async=true;s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(k)}&callback=__gmInit&loading=async&language=pt-BR&region=BR`;
-    s.onerror=()=>{_gLoad=null;rej(new Error("Sem conexão com o Google Maps"))};document.head.appendChild(s)});return _gLoad}
-function definirPos(ll){$("coord").value=`${ll.lat().toFixed(6)}, ${ll.lng().toFixed(6)}`;atualizarLoc(true);calc()}
+    s.onerror=()=>{_gLoad=null;rej(new Error("sem conexão com o Google Maps"))};document.head.appendChild(s)});return _gLoad}
+const comTempo=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error("tempo esgotado")),ms))]);
+function definirPos(lat,lng){$("coord").value=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;atualizarLoc(true);calc();
+  $("gExterno").href=`https://www.google.com/maps/@?api=1&map_action=map&center=${lat},${lng}&zoom=20&basemap=satellite`}
+async function posInicial(tipo){
+  if(LOC)return {lat:LOC.lat,lng:LOC.lng,z:19,msg:"Pino nas coordenadas informadas."};
+  const end=$("endereco").value.trim(),cap=CAPITAIS[ufSel.value];
+  if(!end)return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Sem endereço: navegue até o imóvel e clique no telhado.</span>'};
+  const q=end+", "+ufSel.value+", Brasil";
+  try{
+    if(tipo==="google"){const r=await new Promise(res=>new google.maps.Geocoder().geocode({address:q,region:"BR"},(r,st)=>res(st==="OK"?r:null)));
+      if(r&&r.length){const g=r[0].geometry,ex=g.location_type==="ROOFTOP";return {lat:g.location.lat(),lng:g.location.lng(),z:ex?20:17,msg:ex?"Endereço encontrado.":"<b>Localização aproximada</b> (bairro/quadra): arraste o pino até o telhado."}}}
+    else{const r=await comTempo(fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&q=${encodeURIComponent(q)}`),8000).then(x=>x.json());
+      if(r&&r.length)return {lat:+r[0].lat,lng:+r[0].lon,z:17,msg:"<b>Localização aproximada</b> pelo endereço: arraste o pino até o telhado do cliente."}}
+  }catch(e){console.warn(e)}
+  return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Endereço não encontrado: navegue até o imóvel e clique no telhado.</span>'}}
 async function localizarNoMapa(){
-  if(!gKey()){mapaSimples();return}
-  try{await Promise.race([carregarGoogle(),new Promise((_,r)=>setTimeout(()=>r(new Error("O Google Maps não respondeu")),12000))])}
-  catch(e){mapaSimples(`<span style="color:var(--warn)">Não foi possível usar a sua chave do Google (${esc(e.message)}). Mostrando o mapa básico.</span>`);return}
-  $("gEmbedBox").classList.add("hidden");$("gSemChave").classList.add("hidden");
-  $("gBox").classList.remove("hidden");$("cardMapa").scrollIntoView({behavior:"smooth",block:"start"});
-  if(!gMap){gMap=new google.maps.Map($("gmap"),{center:{lat:-15.79,lng:-47.88},zoom:12,mapTypeId:"hybrid",tilt:0,streetViewControl:false,rotateControl:false,fullscreenControl:true,mapTypeControl:true});
-    gMarker=new google.maps.Marker({map:gMap,draggable:true,position:gMap.getCenter()});
-    gMarker.addListener("dragend",()=>definirPos(gMarker.getPosition()));gMap.addListener("click",e=>{gMarker.setPosition(e.latLng);definirPos(e.latLng)})}
-  const ir=(ll,z,msg)=>{gMap.setCenter(ll);gMap.setZoom(z);gMarker.setPosition(ll);definirPos(gMarker.getPosition());$("gMsg").innerHTML=msg};
-  if(LOC){ir({lat:LOC.lat,lng:LOC.lng},20,"Pino nas coordenadas informadas. Ajuste se precisar.");return}
-  const end=$("endereco").value.trim();
-  if(!end){toast("Informe o endereço ou as coordenadas");$("gMsg").textContent="Informe o endereço no passo 1 ou clique no mapa para marcar o imóvel.";return}
-  new google.maps.Geocoder().geocode({address:end+", "+ufSel.value+", Brasil",region:"BR"},(r,st)=>{
-    if(st!=="OK"||!r.length){$("gMsg").innerHTML='<span style="color:var(--warn)">Endereço não encontrado. Navegue no mapa e clique no telhado do cliente.</span>';gMap.setCenter({lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2]});return}
-    const g=r[0].geometry,exato=g.location_type==="ROOFTOP";
-    ir(g.location,exato?20:17,exato?"Endereço encontrado. Confira se o pino está sobre o telhado certo.":"<b>Localização aproximada</b> (bairro/quadra). Arraste o pino até o telhado do cliente.")})}
+  $("gSemChave").classList.add("hidden");$("gBox").classList.remove("hidden");
+  try{$("cardMapa").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
+  $("gMsg").textContent="⏳ Carregando o mapa…";
+  {const e0=$("endereco").value.trim();$("gExterno").href=LOC?`https://www.google.com/maps/@?api=1&map_action=map&center=${LOC.lat},${LOC.lng}&zoom=20&basemap=satellite`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e0||"")+", "+ufSel.value+", Brasil")}`}
+  let tipo="esri";
+  if(gKey()&&!gFalhou){try{await comTempo(carregarGoogle(),12000);tipo="google"}catch(e){$("gMsg").textContent="Google Maps indisponível ("+e.message+"): usando o mapa alternativo."}}
+  if(MP.tipo!==tipo){MP.map=null;MP.mk=null;$("gmap").innerHTML="";const novo=$("gmap").cloneNode(false);$("gmap").replaceWith(novo)}
+  try{
+    if(tipo==="google"&&!MP.map){
+      MP.map=new google.maps.Map($("gmap"),{center:{lat:-15.79,lng:-47.88},zoom:12,mapTypeId:"hybrid",tilt:0,streetViewControl:false,rotateControl:false,fullscreenControl:true});
+      MP.mk=new google.maps.Marker({map:MP.map,draggable:true,position:MP.map.getCenter()});
+      MP.mk.addListener("dragend",()=>{const p=MP.mk.getPosition();definirPos(p.lat(),p.lng())});
+      MP.map.addListener("click",e=>{MP.mk.setPosition(e.latLng);definirPos(e.latLng.lat(),e.latLng.lng())})}
+    if(tipo==="esri"&&!MP.map){carregarCSS(LEAF_CSS);await comTempo(carregarScript(LEAF_JS),15000);
+      MP.map=L.map($("gmap"),{maxZoom:21,zoomSnap:1}).setView([-15.79,-47.88],12);
+      L.tileLayer(T_SAT,{maxZoom:21,maxNativeZoom:19,crossOrigin:true,attribution:"Imagens © Esri, Maxar, Earthstar Geographics"}).addTo(MP.map);
+      L.tileLayer(T_RUAS,{maxZoom:21,maxNativeZoom:19,crossOrigin:true,opacity:.9}).addTo(MP.map);
+      L.tileLayer(T_NOMES,{maxZoom:21,maxNativeZoom:19,crossOrigin:true}).addTo(MP.map);
+      MP.mk=L.marker([-15.79,-47.88],{draggable:true}).addTo(MP.map);
+      MP.mk.on("dragend",()=>{const p=MP.mk.getLatLng();definirPos(p.lat,p.lng)});
+      MP.map.on("click",e=>{MP.mk.setLatLng(e.latlng);definirPos(e.latlng.lat,e.latlng.lng)})}
+    MP.tipo=tipo;
+    const p=await posInicial(tipo);
+    if(tipo==="google"){MP.map.setCenter({lat:p.lat,lng:p.lng});MP.map.setZoom(p.z);MP.mk.setPosition({lat:p.lat,lng:p.lng})}
+    else{MP.map.setView([p.lat,p.lng],p.z);MP.mk.setLatLng([p.lat,p.lng]);setTimeout(()=>MP.map.invalidateSize(),200)}
+    definirPos(p.lat,p.lng);
+    $("gMsg").innerHTML=p.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
+    $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":"Mapa alternativo sem chave: imagens Esri. Para usar o Google, cadastre a chave em Parâmetros de preço.";
+  }catch(e){console.error(e);$("gMsg").innerHTML=`<span style="color:var(--warn)">Não foi possível carregar o mapa (${esc(e.message)}). Verifique a internet e abra o simulador direto no navegador.</span>`}}
 $("gLocalizar").onclick=localizarNoMapa;
+
+// ---- captura da vista ----
+const mpp=(lat,z)=>156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z); // metros por pixel no zoom z
+const lon2x=(lng,z)=>(lng+180)/360*256*Math.pow(2,z);
+const lat2y=(lat,z)=>{const r=lat*Math.PI/180;return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256*Math.pow(2,z)};
+function carregarTile(u){return new Promise(res=>{const im=new Image();im.crossOrigin="anonymous";im.onload=()=>res(im);im.onerror=()=>res(null);im.src=u})}
+async function capturarTiles(camadas,x0,y0,W,H,z){ // recorte em pixels globais do zoom z
+  const cv=document.createElement("canvas");cv.width=Math.round(W);cv.height=Math.round(H);const ctx=cv.getContext("2d");ctx.fillStyle="#cfcfcf";ctx.fillRect(0,0,cv.width,cv.height);
+  const tx0=Math.floor(x0/256),ty0=Math.floor(y0/256),tx1=Math.floor((x0+W)/256),ty1=Math.floor((y0+H)/256);
+  for(const c of camadas){const jobs=[];for(let tx=tx0;tx<=tx1;tx++)for(let ty=ty0;ty<=ty1;ty++)
+      jobs.push(carregarTile(c.replace("{z}",z).replace("{x}",tx).replace("{y}",ty)).then(im=>{if(im)ctx.drawImage(im,tx*256-x0,ty*256-y0)}));
+    await Promise.all(jobs)}
+  ctx.font="11px Helvetica";ctx.fillStyle="rgba(255,255,255,.85)";ctx.fillRect(cv.width-196,cv.height-16,196,16);ctx.fillStyle="#333";ctx.fillText("Imagens © Esri, Maxar, Earthstar Geographics",cv.width-192,cv.height-4);
+  return cv}
+const canvasParaArquivo=cv=>new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(new File([b],"mapa.jpg",{type:"image/jpeg"})):rej(new Error("imagem bloqueada")),"image/jpeg",0.9)}catch(e){rej(e)}});
 async function baixarImg(u){const r=await fetch(u);if(!r.ok)throw new Error("Google respondeu "+r.status);const b=await r.blob();
   if(!/^image\//.test(b.type))throw new Error("resposta inválida do Google");return new File([b],"google.png",{type:b.type})}
+function aplicarImagens(satFile,mppOrig,larguraOrig,mapaFile,pin){
+  $("satFonte").value=MP.tipo==="google"?"Imagem de satélite: Google":"Imagem de satélite: Esri, Maxar, Earthstar Geographics";
+  $("mapaFonte").value=MP.tipo==="google"?"Mapa: Google":"Mapa: Esri";
+  if(mapaFile)lerImagem(mapaFile,img=>{MAPA={...img,pin:pin||[0.5,0.5],semPino:!pin};MAPA.imgEl=new Image();MAPA.imgEl.onload=desenharMapa;MAPA.imgEl.src=MAPA.url;
+    $("mapaPrev").classList.remove("hidden");$("mapaZona").classList.add("hidden")});
+  lerImagem(satFile,img=>{SAT=img;$("satImg").src=SAT.url;$("satPrev").classList.remove("hidden");$("satZona").classList.add("hidden");
+    arrNovaImagem();ARR.escala=mppOrig*larguraOrig/img.w;ARR.norte=0;$("arrNorte").value=0;setModo("area");renderListas();calc();
+    try{$("cardArr").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
+    toast("Vista aplicada — agora desenhe a área de instalação")})}
 $("gImagens").onclick=async()=>{
-  if(!gMarker){toast("Localize o imóvel primeiro");return}
-  const p=gMarker.getPosition(),lat=p.lat(),lng=p.lng(),z=+$("gZoom").value,k=encodeURIComponent(gKey()),B="https://maps.googleapis.com/maps/api/staticmap";
-  const uSat=`${B}?center=${lat},${lng}&zoom=${z}&size=640x640&scale=2&maptype=satellite&key=${k}`;
-  const uLoc=`${B}?center=${lat},${lng}&zoom=17&size=640x480&scale=2&maptype=hybrid&markers=color:red%7C${lat},${lng}&language=pt-BR&region=BR&key=${k}`;
-  $("gImagens").disabled=true;$("gImagens").textContent="Gerando…";
-  try{const [fs,fl]=await Promise.all([baixarImg(uSat),baixarImg(uLoc)]);
-    const mpp=156543.03392*Math.cos(lat*Math.PI/180)/Math.pow(2,z)/2; // metros por pixel (scale=2)
-    $("satFonte").value="Imagem de satélite: Google";$("mapaFonte").value="Mapa: Google";
-    carregarImagem(fl,"mapa",{semPino:true});
-    lerImagem(fs,img=>{SAT=img;$("satImg").src=SAT.url;$("satPrev").classList.remove("hidden");$("satZona").classList.add("hidden");
-      const kres=img.w/1280; // lerImagem pode reduzir a imagem
-      arrNovaImagem();ARR.escala=mpp/kres;ARR.norte=0;$("arrNorte").value=0;setModo("area");renderListas();calc();
-      $("cardArr").scrollIntoView({behavior:"smooth",block:"start"});toast("Imagens geradas — agora desenhe a área de instalação")})}
-  catch(e){console.error(e);toast("Falha ao gerar imagens: "+e.message)}
-  finally{$("gImagens").disabled=false;$("gImagens").textContent="Gerar imagens para a proposta"}};
+  if(!MP.map){toast("Localize o imóvel primeiro");return}
+  const bt=$("gImagens");bt.disabled=true;bt.textContent="⏳ Capturando…";
+  try{
+    if(MP.tipo==="google"){
+      const c=MP.map.getCenter(),z=MP.map.getZoom(),el=$("gmap"),w=Math.min(640,el.clientWidth),h=Math.min(640,el.clientHeight),k=encodeURIComponent(gKey()),B="https://maps.googleapis.com/maps/api/staticmap";
+      const p=MP.mk.getPosition();
+      const [fs,fl]=await Promise.all([baixarImg(`${B}?center=${c.lat()},${c.lng()}&zoom=${z}&size=${w}x${h}&scale=2&maptype=satellite&key=${k}`),
+        baixarImg(`${B}?center=${p.lat()},${p.lng()}&zoom=17&size=640x440&scale=2&maptype=hybrid&markers=color:red%7C${p.lat()},${p.lng()}&language=pt-BR&region=BR&key=${k}`)]);
+      aplicarImagens(fs,mpp(c.lat(),z)/2,w*2,fl,null)}
+    else{
+      const b=MP.map.getBounds(),zv=MP.map.getZoom();let z=Math.min(19,zv+1);
+      const lim=()=>({x0:lon2x(b.getWest(),z),y0:lat2y(b.getNorth(),z),x1:lon2x(b.getEast(),z),y1:lat2y(b.getSouth(),z)});
+      let r=lim();while((r.x1-r.x0)>2200&&z>12){z--;r=lim()}
+      const sat=await capturarTiles([T_SAT],r.x0,r.y0,r.x1-r.x0,r.y1-r.y0,z);
+      const p=MP.mk.getLatLng(),zl=17,px=lon2x(p.lng,zl),py=lat2y(p.lat,zl),LW=1280,LH=880;
+      const loc=await capturarTiles([T_SAT,T_RUAS,T_NOMES],px-LW/2,py-LH/2,LW,LH,zl);
+      const [fs,fl]=await Promise.all([canvasParaArquivo(sat),canvasParaArquivo(loc)]);
+      aplicarImagens(fs,mpp(b.getCenter().lat,z),sat.width,fl,[0.5,0.5])}
+  }catch(e){console.error(e);toast("Não foi possível capturar a imagem: "+e.message)}
+  finally{bt.disabled=false;bt.textContent="📸 Usar esta vista na proposta"}};
 gAtualizarUI();
 
 // =================== DISPOSIÇÃO DOS MÓDULOS ===================
@@ -1891,7 +1966,8 @@ function gerarPDF(){
     const op=d.ops[k];
     secao(sn()+tit,ix===0?60:60);
     tabela({head:[["Item","Qtd","Valor"]],
-      body:op.linhas.map(l=>[pdfTxt(l.desc)+(mostraForn&&l.forn&&l.forn!=="Diversos"?"\nFornecedor: "+pdfTxt(l.forn):""),String(l.q),pdfTxt(brl(l.v))]),
+      body:(()=>{const b=[];let gr=false;op.linhas.forEach(l=>{if(l.cabo&&!gr){gr=true;b.push([{content:"CABOS E CONECTORES",colSpan:3,styles:{fillColor:[240,237,229],fontStyle:"bold",fontSize:7.8,textColor:CINZA}}])}
+        b.push([pdfTxt(l.desc)+(mostraForn&&l.forn&&l.forn!=="Diversos"?"\nFornecedor: "+pdfTxt(l.forn):""),String(l.q),pdfTxt(brl(l.v))])});return b})(),
       foot:[[pdfTxt(`Investimento total  ·  à vista ${brl(op.total*(1-c.desc/100))}`),"",pdfTxt(brl(op.total))]],
       headStyles:{fillColor:k==="string"?NAVY:VERDE,textColor:255,fontStyle:"bold",fontSize:8.8},
       footStyles:{fillColor:k==="string"?NAVY:VERDE,textColor:255,fontStyle:"bold",fontSize:10},
