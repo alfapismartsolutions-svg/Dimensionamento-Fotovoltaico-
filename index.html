@@ -233,6 +233,10 @@ input:disabled,select:disabled{opacity:.55}
       <label>Módulo fotovoltaico</label>
       <select id="modulo"></select>
       <div class="row">
+        <div><label>Inversor string (opção 1)</label><select id="invMarca"><option value="">Menor custo</option></select></div>
+        <div><label>Microinversor (opção 2)</label><select id="microSel"></select></div>
+      </div>
+      <div class="row">
         <div><label>Potência do módulo (W)</label><input id="wp" type="number"></div>
         <div><label>Área do módulo (m²)</label><input id="area" type="number" step="0.01"></div>
       </div>
@@ -419,6 +423,10 @@ input:disabled,select:disabled{opacity:.55}
     <h3>Proposta em PDF</h3>
     <div class="row">
       <div><label>Validade da proposta (dias)</label><input id="c-validade" type="number"></div>
+      <div><label>Garantia da instalação (anos)</label><input id="c-garServ" type="number"></div>
+      <div><label>Prazo de instalação (dias após aprovação)</label><input id="c-prazo" type="number"></div>
+    </div>
+    <div class="row">
       <div><label>Fornecedor dos itens no PDF</label><select id="c-fornpdf"><option value="1">Mostrar</option><option value="0">Ocultar</option></select></div>
     </div>
     <h3>Inversor</h3>
@@ -436,6 +444,8 @@ input:disabled,select:disabled{opacity:.55}
       <div><label>Máx. módulos/string</label><input id="c-strMax" type="number"></div>
       <div><label>Pares MC4 de reserva</label><input id="c-mc4res" type="number"></div>
     </div>
+    <label>Temperatura mínima do local (°C) — para a tensão das strings</label>
+    <input id="c-tmin" type="number">
     <div class="hint">Os módulos são distribuídos em pares entre as MPPTs. Cada string leva um cabo vermelho e um preto do arranjo até o inversor (distância + 3 m de folga) e 2 pares de MC4 (saída dos módulos e entrada no inversor). O máximo por string deve respeitar a tensão máxima do inversor.</div>
     <label>Ganho de geração do microinversor (%)</label>
     <input id="c-ganhoM" type="number" step="0.5">
@@ -885,17 +895,29 @@ const fiobPct=a=>a<=2022?0:a===2023?.15:a===2024?.30:a===2025?.45:a===2026?.60:a
 
 // =================== CATÁLOGO (preços à vista Pix, levantados em nov/2026) ===================
 const CAT_DEF={
+  // voc/vmp/isc (STC), bvoc (%/°C) e garantia vêm dos datasheets; null = não informado
   modulos:[
-    {id:"ja620",nome:"Módulo JA Solar JAM66D45-620/LB 620 W bifacial",wp:620,area:2.71,comp:2.384,larg:1.134,preco:809.10,forn:"Minha Casa Solar"},
-    {id:"han620",nome:"Módulo Hanersun HiTouch 620 W bifacial N-type",wp:620,area:2.71,comp:2.382,larg:1.134,preco:752.85,forn:"MeuGerador"}
+    {id:"ja620",nome:"Módulo JA Solar JAM66D45-620/LB 620 W bifacial",marca:"JA Solar",wp:620,area:2.71,comp:2.384,larg:1.134,voc:48.50,vmp:40.21,isc:16.13,bvoc:-0.25,gar:"12 anos produto · 30 anos desempenho",preco:809.10,forn:"Minha Casa Solar"},
+    {id:"dah620",nome:"Módulo DAH Solar DHN-66Z16/DG 620 W bifacial",marca:"DAH Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:48.6,vmp:41.3,isc:null,bvoc:null,gar:"",preco:668.67,forn:"NeoSolar"},
+    {id:"cs620",nome:"Módulo Canadian Solar CS6.2-66TB 620 W bifacial",marca:"Canadian Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:809.10,forn:"Minha Casa Solar"},
+    {id:"era620",nome:"Módulo Era Solar 620 W bifacial N-type",marca:"Era Solar",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:669.98,forn:"MeuGerador"},
+    {id:"han620",nome:"Módulo Hanersun HiTouch 620 W bifacial N-type",marca:"Hanersun",wp:620,area:2.71,comp:2.382,larg:1.134,voc:null,vmp:null,isc:null,bvoc:null,gar:"",preco:752.85,forn:"MeuGerador"},
+    {id:"osda610",nome:"Módulo Osda ODA610-33V-MHDRZ 610 W bifacial",marca:"Osda",wp:610,area:2.71,comp:2.382,larg:1.134,voc:48.68,vmp:40.46,isc:15.96,bvoc:null,gar:"",preco:655.65,forn:"Minha Casa Solar"}
   ],
+  // vmax (V) e imax (A por MPPT) só quando confirmados no datasheet
   string:[
-    {id:"gw5",nome:"Inversor Growatt MIN5000TL-X2 5 kW 220 V 2 MPPT",kw:5,mppt:2,tri:false,preco:2143.22,forn:"MeuGerador"},
-    {id:"gw8",nome:"Inversor Growatt MIN8000TL-X2 8 kW 220 V 3 MPPT",kw:8,mppt:3,tri:false,preco:3624.71,forn:"MeuGerador"},
-    {id:"gw15",nome:"Inversor Growatt MID15KTL3-X 15 kW 380 V trifásico 4 MPPT",kw:15,mppt:4,tri:true,preco:5831.10,forn:"Minha Casa Solar"}
+    {id:"gw5",marca:"Growatt",nome:"Inversor Growatt MIN5000TL-X2 5 kW 220 V 2 MPPT",kw:5,mppt:2,tri:false,vmax:null,imax:16,gar:"",preco:2143.22,forn:"MeuGerador"},
+    {id:"gw8",marca:"Growatt",nome:"Inversor Growatt MIN8000TL-X2 8 kW 220 V 3 MPPT",kw:8,mppt:3,tri:false,vmax:null,imax:16,gar:"",preco:3624.71,forn:"MeuGerador"},
+    {id:"gw15",marca:"Growatt",nome:"Inversor Growatt MID15KTL3-X 15 kW 380 V trifásico 4 MPPT",kw:15,mppt:4,tri:true,vmax:null,imax:null,gar:"",preco:5831.10,forn:"Minha Casa Solar"},
+    {id:"dy5",marca:"Deye",nome:"Inversor Deye SUN-5K-G05P1-EU-AM2 5 kW 220 V 2 MPPT",kw:5,mppt:2,tri:false,vmax:null,imax:null,gar:"",preco:2301.74,forn:"MeuGerador"},
+    {id:"dy6",marca:"Deye",nome:"Inversor Deye SUN-6K-G05P1-EU-AM2 6 kW 220 V 2 MPPT",kw:6,mppt:2,tri:false,vmax:null,imax:null,gar:"",preco:2223.28,forn:"MeuGerador"},
+    {id:"sl5",marca:"Solis",nome:"Inversor Solis S6-GR1P5K 5 kW 220 V 2 MPPT",kw:5,mppt:2,tri:false,vmax:600,imax:14,gar:"5 anos",preco:4369.00,forn:"Minha Casa Solar"},
+    {id:"hw5",marca:"Huawei",nome:"Inversor Huawei SUN2000-5KTL-L1 5 kW 220 V 2 MPPT",kw:5,mppt:2,tri:false,vmax:600,imax:12.5,gar:"5 anos (extensível)",preco:6509.07,forn:"Minha Casa Solar"}
   ],
   micro:[
-    {id:"hms2250",nome:"Microinversor Hoymiles HMS-2250DW-4T 2,25 kW 220 V Wi-Fi",kw:2.25,mods:4,preco:1386.87,forn:"MeuGerador"}
+    {id:"hms2250",marca:"Hoymiles",nome:"Microinversor Hoymiles HMS-2250DW-4T 2,25 kW 220 V Wi-Fi",kw:2.25,mods:4,gar:"",preco:1386.87,forn:"MeuGerador"},
+    {id:"ds3d",marca:"APsystems",nome:"Microinversor APsystems DS3D 2,0 kW 220 V 2 MPPT",kw:2.0,mods:4,gar:"15 anos (com registro no EMA)",preco:1394.07,forn:"Minha Casa Solar"},
+    {id:"dysun2250",marca:"Deye",nome:"Microinversor Deye SUN2250G4 2,25 kW 220 V Wi-Fi",kw:2.25,mods:4,gar:"",preco:1429.00,forn:"Mercado Livre"}
   ],
   cabos:[
     {id:"cabo_vm",nome:"Cabo solar 4 mm² vermelho CABEL – bobina 50 m",preco:201.35,forn:"MeuGerador"},
@@ -916,7 +938,7 @@ const ESTR_NOTA={
   laje:{nd:"Triângulo com inclinação ajustável, fixado com chumbador na laje. Verificar impermeabilização.",madeira:"Triângulo com inclinação ajustável, fixado com chumbador na laje.",metal:"Triângulo com inclinação ajustável, fixado com chumbador na laje."}
 };
 const EMPRESA={nome:"ALFAPI Engenharia Energética",cnpj:"69.193.249/0001-67",tel:"(61) 98192-4639"};
-const CFG_DEF={validade:10,fornpdf:1,mo:150,momin:1800,momarg:35,moadic:15,proj:1200,ca:600,dist:15,mc4res:2,strMax:12,strMin:4,frete:0,kitmarg:15,imp:6,inf:6,deg:0.5,
+const CFG_DEF={validade:10,fornpdf:1,mo:150,momin:1800,momarg:35,moadic:15,proj:1200,ca:600,dist:15,mc4res:2,strMax:12,strMin:4,tmin:5,garServ:1,prazo:30,frete:0,kitmarg:15,imp:6,inf:6,deg:0.5,
   fiobrs:0.1245,ano:2027,juros:1.59,prazos:"36,60,84",desc:5,over:30,trocaS:13,trocaM:0,ganhoM:2};
 
 // =================== UTILITÁRIOS ===================
@@ -971,10 +993,13 @@ $("hsp").addEventListener("input",()=>{
 hspInputs.forEach(e=>e.addEventListener("input",()=>{$("hsp").value=(soma(hspInputs.map(x=>+x.value||0))/12).toFixed(2)}));
 
 // módulos
-CAT.modulos.forEach(m=>$("modulo").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome)}</option>`));
+CAT.modulos.forEach(m=>$("modulo").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome)} · ${brl(m.preco)}</option>`));
+[...new Set(CAT.string.map(i=>i.marca))].forEach(m=>$("invMarca").insertAdjacentHTML("beforeend",`<option value="${m}">${m}</option>`));
+CAT.micro.forEach(m=>$("microSel").insertAdjacentHTML("beforeend",`<option value="${m.id}">${esc(m.nome.replace("Microinversor ",""))}</option>`));
 function aplicarModulo(){const m=CAT.modulos.find(x=>x.id===$("modulo").value);$("wp").value=m.wp;$("area").value=m.area;
   if($("modComp")){$("modComp").value=m.comp;$("modLarg").value=m.larg}}
 $("modulo").addEventListener("change",aplicarModulo);aplicarModulo();
+["invMarca","microSel"].forEach(i=>$(i).addEventListener("change",()=>calc()));
 
 function segInit(id,key){
   $(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{
@@ -1004,8 +1029,11 @@ const fatorOri=(incl,ori)=>{const i=INCLS.indexOf(incl);return FORI[INCLS[i<0?2:
 
 // =================== SELEÇÃO DE EQUIPAMENTOS ===================
 function escolherString(kwp,c,tri){
-  const need=kwp/(1+c.over/100);
-  const ops=CAT.string.filter(i=>tri||!i.tri).sort((a,b)=>a.kw-b.kw);
+  const need=kwp/(1+c.over/100),marca=$("invMarca").value;
+  let base=CAT.string.filter(i=>tri||!i.tri);
+  if(marca&&base.some(i=>i.marca===marca))base=base.filter(i=>i.marca===marca);
+  // entre modelos de mesma potência, fica o mais barato
+  const ops=base.sort((a,b)=>a.kw-b.kw||a.preco-b.preco).filter((i,k,arr)=>k===0||arr[k-1].kw!==i.kw);
   if(!ops.length)return [];
   const fit=ops.find(i=>i.kw>=need-1e-9);
   if(fit)return [{it:fit,q:1}];
@@ -1019,7 +1047,7 @@ function montarOpcao(tipo,nMod,mod,c,telhado){
   itens.push({desc:mod.nome,forn:mod.forn,q:nMod,un:mod.preco});
   let inv=[];
   if(tipo==="string"){inv=escolherString(nMod*mod.wp/1000,c,state.lig===100);inv.forEach(x=>itens.push({desc:x.it.nome,forn:x.it.forn,q:x.q,un:x.it.preco,inv:true}))}
-  else{const m=CAT.micro[0];const q=Math.ceil(nMod/m.mods);inv=[{it:m,q}];itens.push({desc:m.nome,forn:m.forn,q,un:m.preco,inv:true})}
+  else{const m=CAT.micro.find(x=>x.id===$("microSel").value)||CAT.micro[0];const q=Math.ceil(nMod/m.mods);inv=[{it:m,q}];itens.push({desc:m.nome,forn:m.forn,q,un:m.preco,inv:true})}
   const e=CAT.estrutura.find(x=>x.id===telhado);const qe=Math.ceil(nMod/e.mods);
   itens.push({desc:e.nome,forn:e.forn,q:qe,un:e.preco});
   // strings por MPPT (módulos sempre em pares)
@@ -1027,7 +1055,10 @@ function montarOpcao(tipo,nMod,mod,c,telhado){
   if(tipo==="string"){
     const mppt=soma(inv.map(x=>(x.it.mppt||1)*x.q));
     let n=Math.max(1,Math.min(mppt,Math.floor(nMod/Math.max(2,c.strMin))));
-    const nMin=Math.ceil(nMod/Math.max(2,c.strMax));if(n<nMin){n=nMin;if(n>mppt)aviso=`${n} strings para ${mppt} MPPTs: haverá strings em paralelo na mesma MPPT (confira a corrente máxima).`}
+    // limite por tensão: Voc na temperatura mínima não pode passar da tensão máxima do inversor
+    const vmaxInv=Math.min(...inv.map(x=>x.it.vmax||Infinity));let maxV=Infinity;
+    if(mod.voc&&isFinite(vmaxInv)){const vocFrio=mod.voc*(1+Math.abs(mod.bvoc||-0.30)/100*(25-c.tmin));maxV=Math.floor(vmaxInv/vocFrio)}
+    const nMin=Math.ceil(nMod/Math.max(2,Math.min(c.strMax,maxV)));if(n<nMin){n=nMin;if(n>mppt)aviso=`${n} strings para ${mppt} MPPTs: haverá strings em paralelo na mesma MPPT (confira a corrente máxima).`}
     const pares=nMod/2,base=Math.floor(pares/n),resto=pares%n;
     strings=Array.from({length:n},(_,k)=>2*(base+(k<resto?1:0))).filter(x=>x>0)}
   else strings=[];
@@ -1040,6 +1071,9 @@ function montarOpcao(tipo,nMod,mod,c,telhado){
   const equip=soma(itens.map(i=>i.q*i.un));
   const frete=equip*c.frete/100;
   const invKW=soma(inv.map(x=>x.it.kw*x.q)), invCusto=soma(inv.map(x=>x.it.preco*x.q));
+  if(tipo==="string"){const im=Math.min(...inv.map(x=>x.it.imax||Infinity));
+    if(mod.isc&&isFinite(im)&&mod.isc>im)aviso=(aviso?aviso+" ":"")+`Isc do módulo (${num(mod.isc,2)} A) acima da corrente máxima por MPPT do inversor (${num(im,1)} A): haverá limitação de corrente; confira no datasheet.`;
+    if(!mod.voc||!isFinite(Math.min(...inv.map(x=>x.it.vmax||Infinity))))aviso=(aviso?aviso+" ":"")+"Tensão das strings não verificada (faltam dados de datasheet no catálogo): confira Voc × tensão máxima do inversor."}
   return {tipo,itens,equip,frete,inv,invKW,invCusto,strings,metros,aviso};
 }
 
@@ -1474,14 +1508,21 @@ async function posInicial(tipo){
       if(r&&r.length)return {lat:+r[0].lat,lng:+r[0].lon,z:17,msg:"<b>Localização aproximada</b> pelo endereço: arraste o pino até o telhado do cliente."}}
   }catch(e){console.warn(e)}
   return {lat:cap[1],lng:cap[2],z:12,msg:'<span style="color:var(--warn)">Endereço não encontrado: navegue até o imóvel e clique no telhado.</span>'}}
-async function localizarNoMapa(){
+function mapaReserva(motivo){ // mapa do Google incorporado (sem chave) quando o interativo não carrega
+  const end=$("endereco").value.trim(),q=LOC?`${LOC.lat},${LOC.lng}`:(end?end+", ":"")+ufSel.value+", Brasil";
+  MP.map=null;MP.mk=null;MP.tipo="iframe";
+  const el=$("gmap");el.innerHTML=`<iframe title="Mapa" style="width:100%;height:100%;border:0;border-radius:10px" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=k&z=${LOC?19:16}&hl=pt-BR&output=embed"></iframe>`;
+  $("gMsg").innerHTML=`<span style="color:var(--warn)">Mapa interativo indisponível (${esc(motivo)}). Mostrando o Google Maps básico: dá para ver o imóvel, mas para capturar a vista use o botão de prints no passo 1.</span>`}
+let _auto=true;
+async function localizarNoMapa(ev){
+  const auto=ev==="auto";
   $("gSemChave").classList.add("hidden");$("gBox").classList.remove("hidden");
-  try{$("cardMapa").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
+  if(!auto)try{$("cardMapa").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
   $("gMsg").textContent="⏳ Carregando o mapa…";
   {const e0=$("endereco").value.trim();$("gExterno").href=LOC?`https://www.google.com/maps/@?api=1&map_action=map&center=${LOC.lat},${LOC.lng}&zoom=20&basemap=satellite`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e0||"")+", "+ufSel.value+", Brasil")}`}
   let tipo="esri";
   if(gKey()&&!gFalhou){try{await comTempo(carregarGoogle(),12000);tipo="google"}catch(e){$("gMsg").textContent="Google Maps indisponível ("+e.message+"): usando o mapa alternativo."}}
-  if(MP.tipo!==tipo){MP.map=null;MP.mk=null;$("gmap").innerHTML="";const novo=$("gmap").cloneNode(false);$("gmap").replaceWith(novo)}
+  if(MP.tipo!==tipo){MP.map=null;MP.mk=null;const novo=$("gmap").cloneNode(false);novo.innerHTML="";$("gmap").replaceWith(novo)}
   try{
     if(tipo==="google"&&!MP.map){
       MP.map=new google.maps.Map($("gmap"),{center:{lat:-15.79,lng:-47.88},zoom:12,mapTypeId:"hybrid",tilt:0,streetViewControl:false,rotateControl:false,fullscreenControl:true});
@@ -1497,13 +1538,20 @@ async function localizarNoMapa(){
       MP.mk.on("dragend",()=>{const p=MP.mk.getLatLng();definirPos(p.lat,p.lng)});
       MP.map.on("click",e=>{MP.mk.setLatLng(e.latlng);definirPos(e.latlng.lat,e.latlng.lng)})}
     MP.tipo=tipo;
-    const p=await posInicial(tipo);
+    const p=auto&&!LOC&&!$("endereco").value.trim()?{lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2],z:11,msg:"Informe o endereço ou as coordenadas no passo 1 e clique em 📍 Localizar no mapa, ou navegue e clique no telhado."}:await posInicial(tipo);
     if(tipo==="google"){MP.map.setCenter({lat:p.lat,lng:p.lng});MP.map.setZoom(p.z);MP.mk.setPosition({lat:p.lat,lng:p.lng})}
     else{MP.map.setView([p.lat,p.lng],p.z);MP.mk.setLatLng([p.lat,p.lng]);setTimeout(()=>MP.map.invalidateSize(),200)}
     definirPos(p.lat,p.lng);
     $("gMsg").innerHTML=p.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
     $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":"Mapa alternativo sem chave: imagens Esri. Para usar o Google, cadastre a chave em Parâmetros de preço.";
-  }catch(e){console.error(e);$("gMsg").innerHTML=`<span style="color:var(--warn)">Não foi possível carregar o mapa (${esc(e.message)}). Verifique a internet e abra o simulador direto no navegador.</span>`}}
+  }catch(e){console.error(e);mapaReserva(e.message||"erro")}}
+// o mapa já abre com a página e acompanha as coordenadas digitadas
+setTimeout(()=>localizarNoMapa("auto"),400);
+let _tCoord=null;
+$("coord").addEventListener("input",()=>{clearTimeout(_tCoord);_tCoord=setTimeout(()=>{if(!LOC)return;
+  if(MP.tipo==="google"&&MP.map){MP.map.setCenter({lat:LOC.lat,lng:LOC.lng});MP.map.setZoom(19);MP.mk.setPosition({lat:LOC.lat,lng:LOC.lng})}
+  else if(MP.tipo==="esri"&&MP.map){MP.map.setView([LOC.lat,LOC.lng],19);MP.mk.setLatLng([LOC.lat,LOC.lng])}
+  else if(MP.tipo==="iframe")mapaReserva("modo básico")},900)});
 $("gLocalizar").onclick=localizarNoMapa;
 
 // ---- captura da vista ----
@@ -1532,7 +1580,7 @@ function aplicarImagens(satFile,mppOrig,larguraOrig,mapaFile,pin){
     try{$("cardArr").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
     toast("Vista aplicada — agora desenhe a área de instalação")})}
 $("gImagens").onclick=async()=>{
-  if(!MP.map){toast("Localize o imóvel primeiro");return}
+  if(!MP.map){toast(MP.tipo==="iframe"?"No mapa básico não dá para capturar: cole o print no passo 1":"Localize o imóvel primeiro");return}
   const bt=$("gImagens");bt.disabled=true;bt.textContent="⏳ Capturando…";
   try{
     if(MP.tipo==="google"){
@@ -1928,6 +1976,7 @@ function gerarPDF(){
   tabela({body:P([
     ["Consumo médio informado",num(d.consMed)+" kWh/mês"],
     ["Energia a ser compensada",num(d.alvoAno/12)+" kWh/mês (descontado o custo de disponibilidade de "+d.disp+" kWh)"],
+    ["Geração sobre o consumo",num(o.gerAno/(d.consMed*12||1)*100)+"% do consumo anual"],
     ["Potência instalada",`${num(d.kwp,2)} kWp  (${d.nMod} módulos de ${d.wp} W)`],
     ["Inversor – opção 1",invTxt(d.ops.string)],
     ["Microinversores – opção 2",invTxt(d.ops.micro)],
@@ -1977,6 +2026,20 @@ function gerarPDF(){
   });
   doc.setFont("helvetica","normal");doc.setFontSize(7.8);doc.setTextColor(...CINZA);
   {const ln=doc.splitTextToSize(pdfTxt("Opção 1: menor custo, inversor único instalado na parede. Opção 2: um microinversor a cada 4 módulos, com otimização e monitoramento por módulo e sem alta tensão CC no telhado."),CW);doc.text(ln,M,y-4);y+=ln.length*3.4}
+
+  // garantias, prazo e itens inclusos
+  {secao(sn()+"Garantias, prazo e itens inclusos",70);
+    const S3=d.ops.string,M3=d.ops.micro,g=x=>x&&x.gar?x.gar:"conforme o fabricante";
+    const linhasG=[[`Módulos ${d.mod.marca||""}`.trim(),g(d.mod)],
+      ...[...new Map(S3.inv.map(x=>[x.it.marca,x.it])).values()].map(it=>[`Inversor ${it.marca} (opção 1)`,g(it)]),
+      ...[...new Map(M3.inv.map(x=>[x.it.marca,x.it])).values()].map(it=>[`Microinversor ${it.marca} (opção 2)`,g(it)]),
+      ["Instalação e serviços ALFAPI",`${num(c.garServ)} ano${c.garServ===1?"":"s"}`],
+      ["Prazo de instalação",`até ${num(c.prazo)} dias após a aprovação da proposta`]];
+    tabela({head:[["Item","Garantia / prazo"]],body:P(linhasG),columnStyles:{0:{fontStyle:"bold",cellWidth:70}}});
+    doc.setFont("helvetica","normal");doc.setFontSize(8.6);doc.setTextColor(...NAVY);
+    const inc=["Projeto elétrico e homologação junto à distribuidora","Fornecimento de todos os equipamentos e materiais listados","Estrutura de fixação adequada ao tipo de telhado","Instalação, comissionamento e configuração do monitoramento pelo aplicativo","Acompanhamento até a troca do medidor pela distribuidora"];
+    garante(inc.length*4.6+6);doc.setFont("helvetica","bold");doc.text(pdfTxt("Itens inclusos:"),M,y);y+=4.8;doc.setFont("helvetica","normal");
+    inc.forEach(t=>{doc.setFillColor(...VERDE);doc.circle(M+1.2,y-1.1,0.7,"F");doc.text(pdfTxt(t),M+4,y);y+=4.6});y+=4}
 
   // 3. geração x consumo
   secao(sn()+"Geração estimada x consumo",72);
@@ -2040,7 +2103,6 @@ function gerarPDF(){
     "Os créditos de energia excedente são válidos por 60 meses (Lei 14.300/2022 e REN ANEEL 1.000/2021).",
     `Projeção financeira com reajuste da tarifa de ${num(c.inf,1)}% ao ano e degradação dos módulos de ${num(c.deg,1)}% ao ano.`,
     "Inclui projeto, homologação junto à distribuidora, equipamentos, estrutura de fixação, materiais elétricos e instalação.",
-    "Prazos e garantias dos equipamentos conforme os respectivos fabricantes.",
     `Proposta válida até ${dataBR(val)}. Preços sujeitos à disponibilidade de estoque dos fornecedores.`];
   doc.setFont("helvetica","normal");doc.setFontSize(8.6);doc.setTextColor(...NAVY);
   obs.forEach(t=>{const ln=doc.splitTextToSize(pdfTxt(t),CW-5);garante(ln.length*4+1.5);
