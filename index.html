@@ -290,11 +290,6 @@ input:disabled,select:disabled{opacity:.55}
       <div id="gSemChave" class="hint">Informe o endereço ou as coordenadas no passo 1 e clique em <b>📍 Localizar no mapa</b>.</div>
       <div id="gBox" class="hidden">
         <div class="hint" id="gMsg"></div>
-        <div id="gChaveBox" class="contaSt hidden" style="margin:6px 0">
-          <b>Ative o Google Maps completo</b> (pino arrastável, captura da vista e análise do telhado): cole aqui sua chave da Google Cloud.
-          <div class="locrow" style="margin-top:6px"><input id="gKey2" type="password" placeholder="AIza..." autocomplete="off"><button class="btn mini" id="gKey2Salvar" type="button">Salvar e abrir</button></div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:4px">APIs a ativar: Maps JavaScript, Geocoding, Maps Static e Solar. A chave fica salva só neste navegador.</div>
-        </div>
         <div id="gmap" style="height:460px;border-radius:10px;margin-top:8px;border:1px solid var(--line);background:#ddd"></div>
         <div class="actions" style="margin-top:10px;align-items:center">
           <button class="btn mini" id="gImagens" type="button" style="background:var(--brand)">📸 Usar esta vista na proposta</button>
@@ -1585,7 +1580,6 @@ const T_SAT=ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",T_RUAS=ESRI+"Referen
 function gKey(){try{return localStorage.getItem(GKEY_K)||""}catch(e){return ""}}
 function gAtualizarUI(){if(gKey())$("gKey").value=gKey()}
 $("gKeySalvar").onclick=()=>{try{localStorage.setItem(GKEY_K,$("gKey").value.trim())}catch(e){}_gLoad=null;gFalhou=false;gAtualizarUI();toast("Chave salva");localizarNoMapa()};
-$("gKey2Salvar").onclick=()=>{const v=$("gKey2").value.trim();if(!v){toast("Cole a chave do Google");return}$("gKey").value=v;$("gKeySalvar").onclick()};
 function carregarCSS(h){if(document.querySelector(`link[href="${h}"]`))return;const l=document.createElement("link");l.rel="stylesheet";l.href=h;document.head.appendChild(l)}
 function carregarGoogle(){if(window.google&&google.maps&&google.maps.Map)return Promise.resolve();if(_gLoad)return _gLoad;
   _gLoad=new Promise((res,rej)=>{const k=gKey();if(!k){rej(new Error("sem chave"));return}
@@ -1628,7 +1622,7 @@ function googleBasico(){ // Google Maps incorporado, sem chave
   $("gmap").innerHTML=`<iframe title="Google Maps" style="width:100%;height:100%;border:0;border-radius:10px" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=k&z=${LOC?19:(end?17:12)}&hl=pt-BR&output=embed"></iframe>`;
   $("gMsg").innerHTML=LOC||end?"Google Maps em modo satélite no endereço informado.":"Informe o endereço ou as coordenadas no passo 1.";
   $("gProv").textContent="Mapa: Google Maps (modo básico, sem chave).";
-  $("gChaveBox").classList.remove("hidden")}
+}
 let _auto=true;
 async function localizarNoMapa(ev){
   const auto=ev==="auto";
@@ -1636,7 +1630,6 @@ async function localizarNoMapa(ev){
   if(!auto)try{$("cardMapa").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
   $("gMsg").textContent="⏳ Carregando o mapa…";
   {const e0=$("endereco").value.trim();$("gExterno").href=LOC?`https://www.google.com/maps/@?api=1&map_action=map&center=${LOC.lat},${LOC.lng}&zoom=20&basemap=satellite`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e0||"")+", "+ufSel.value+", Brasil")}`}
-  $("gChaveBox").classList.toggle("hidden",!!gKey());
   let tipo="esri";
   if(gKey()&&!gFalhou){try{await comTempo(carregarGoogle(),12000);tipo="google"}catch(e){$("gMsg").textContent="Google Maps indisponível ("+e.message+"): usando o mapa alternativo."}}
   if(MP.tipo!==tipo){MP.map=null;MP.mk=null;const novo=$("gmap").cloneNode(false);novo.innerHTML="";$("gmap").replaceWith(novo)}
@@ -1662,7 +1655,7 @@ async function localizarNoMapa(ev){
     if(p.padrao)endAuto=true; // só posiciona o mapa; o endereço digitado depois ainda move o pino
     else{definirPos(p.lat,p.lng);if(doEnd)endAuto=true}
     $("gMsg").innerHTML=p.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
-    $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":(gKey()?"O Google não aceitou a chave; mostrando o mapa alternativo (imagens Esri). Confira as APIs ativadas e a restrição de domínio da chave.":"Mapa sem chave: imagens Esri. Para usar as imagens do Google, salve a chave no quadro acima.");
+    $("gProv").textContent=tipo==="google"?"Mapa: Google Maps (sua chave).":(gKey()?"O Google não aceitou a chave; mostrando o mapa alternativo (imagens Esri). Confira as APIs ativadas e a restrição de domínio da chave.":"Mapa sem chave: imagens Esri. Para usar as imagens do Google, cadastre a chave em Parâmetros de preço.");
   }catch(e){console.error(e);mapaReserva(e.message||"erro")}}
 // o mapa já abre com a página e acompanha as coordenadas digitadas
 setTimeout(()=>localizarNoMapa("auto"),400);
@@ -1713,7 +1706,7 @@ function aplicarImagens(satFile,mppOrig,larguraOrig,mapaFile,pin){
     try{$("cardArr").scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}
     toast("Vista aplicada — agora desenhe a área de instalação")})}
 $("gImagens").onclick=async()=>{
-  if(!MP.map){{if(MP.tipo==="iframe"){toast("Para capturar a vista, salve a chave do Google no quadro abaixo do mapa");$("gKey2").focus()}else toast("Localize o imóvel primeiro")};return}
+  if(!MP.map){toast(MP.tipo==="iframe"?"Mapa interativo indisponível: recarregue a página ou cole um print com Ctrl + V":"Localize o imóvel primeiro");return}
   const bt=$("gImagens");bt.disabled=true;bt.textContent="⏳ Capturando…";
   try{
     if(MP.tipo==="google"){
