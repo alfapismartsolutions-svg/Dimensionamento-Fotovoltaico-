@@ -181,7 +181,7 @@ input:disabled,select:disabled{opacity:.55}
       <label>Endereço / cidade <span style="font-weight:500">(opcional)</span></label>
       <input id="endereco" placeholder="Ex.: SHIS QI 15, Lago Sul – Brasília">
       <label>Localização <span style="font-weight:500">(coordenadas ou link do Google Maps)</span></label>
-      <div class="locrow"><input id="coord" placeholder="-15.8267, -47.9218  ou cole o link"><button class="btn mini" id="gLocalizar" type="button">📍 Localizar no mapa</button></div>
+      <input id="coord" placeholder="-15.8267, -47.9218  ou cole o link">
       <div class="hint"><a class="lnk" id="abrirMapa" target="_blank" rel="noopener" style="font-weight:600">Abrir no Google Maps ↗</a></div>
       <div class="hint" id="coordHint">No Google Maps, clique com o botão direito no telhado e clique nas coordenadas para copiar.</div>
       <div id="satZona" class="drop hidden"></div><input type="file" id="satFile" accept="image/*" hidden>
@@ -287,7 +287,7 @@ input:disabled,select:disabled{opacity:.55}
 
     <div class="card" id="cardMapa" style="margin-top:18px">
       <h2>Localização no mapa</h2>
-      <div id="gSemChave" class="hint">Informe o endereço ou as coordenadas no passo 1 e clique em <b>📍 Localizar no mapa</b>.</div>
+      <div id="gSemChave" class="hint">Digite o endereço ou as coordenadas ao lado: o mapa vai direto para o local.</div>
       <div id="gBox" class="hidden">
         <div class="hint" id="gMsg"></div>
         <div id="gmap" style="height:460px;border-radius:10px;margin-top:8px;border:1px solid var(--line);background:#ddd"></div>
@@ -1649,7 +1649,7 @@ async function localizarNoMapa(ev){
       MP.map.on("click",e=>{MP.mk.setLatLng(e.latlng);definirPos(e.latlng.lat,e.latlng.lng)})}
     MP.tipo=tipo;
     const doEnd=!LOC&&!!$("endereco").value.trim();
-    const p=auto&&!LOC&&!$("endereco").value.trim()?{padrao:true,lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2],z:11,msg:"Informe o endereço ou as coordenadas no passo 1 e clique em 📍 Localizar no mapa, ou navegue e clique no telhado."}:await posInicial(tipo);
+    const p=auto&&!LOC&&!$("endereco").value.trim()?{padrao:true,lat:CAPITAIS[ufSel.value][1],lng:CAPITAIS[ufSel.value][2],z:11,msg:"Digite o endereço ou as coordenadas: o mapa vai direto para o local."}:await posInicial(tipo);
     if(tipo==="google"){MP.map.setCenter({lat:p.lat,lng:p.lng});MP.map.setZoom(p.z);MP.mk.setPosition({lat:p.lat,lng:p.lng})}
     else{MP.map.setView([p.lat,p.lng],p.z);MP.mk.setLatLng([p.lat,p.lng]);setTimeout(()=>MP.map.invalidateSize(),200)}
     if(p.padrao)endAuto=true; // só posiciona o mapa; o endereço digitado depois ainda move o pino
@@ -1664,7 +1664,6 @@ $("coord").addEventListener("input",()=>{clearTimeout(_tCoord);_tCoord=setTimeou
   if(MP.tipo==="google"&&MP.map){MP.map.setCenter({lat:LOC.lat,lng:LOC.lng});MP.map.setZoom(19);MP.mk.setPosition({lat:LOC.lat,lng:LOC.lng})}
   else if(MP.tipo==="esri"&&MP.map){MP.map.setView([LOC.lat,LOC.lng],19);MP.mk.setLatLng([LOC.lat,LOC.lng])}
   else if(MP.tipo==="iframe")googleBasico()},900)});
-$("gLocalizar").onclick=localizarNoMapa;
 let _tEnd=null,endAuto=false,_endSeq=0;
 $("coord").addEventListener("input",()=>{endAuto=false});
 $("endereco").addEventListener("input",()=>{clearTimeout(_tEnd);_tEnd=setTimeout(async()=>{
