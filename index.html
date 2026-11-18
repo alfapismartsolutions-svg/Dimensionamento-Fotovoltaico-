@@ -1294,17 +1294,17 @@ function render(d){
     ["Consumo médio",num(d.consMed)+" kWh/mês"],
     ["Custo de disponibilidade",d.disp+" kWh/mês"],
     ["Energia a gerar",num(d.alvoAno/12)+" kWh/mês"],
-    ["HSP média",num(d.hsp,2)+" h/dia"],
-    ["Orientação × sombreamento",`${num(d.fOri*100)}% × ${num(100-d.somb)}%`],
-    ["PR efetivo",num(o.prEf,3)],
-    ["Potência necessária",num(d.kwpNec,2)+" kWp"],
-    ["Módulos",`${d.nMod} × ${d.wp} W (pares por MPPT)`],
+    ["HSP média",num(d.hsp,2)+" h/dia","adm"],
+    ["Orientação × sombreamento",`${num(d.fOri*100)}% × ${num(100-d.somb)}%`,"adm"],
+    ["PR efetivo",num(o.prEf,3),"adm"],
+    ["Potência necessária",num(d.kwpNec,2)+" kWp","adm"],
+    ["Módulos",`${d.nMod} × ${d.wp} W`],
     ["Potência instalada",num(d.kwp,2)+" kWp"],
     ["Inversor (opção 1)",invTxt(d.ops.string)],
-    ["Relação CC/CA (opção 1)",d.ops.string.invKW?num(d.kwp/d.ops.string.invKW*100)+"%":"–"],
-    ["Strings por MPPT (opção 1)",d.ops.string.strings.map((n,k)=>`MPPT ${k+1}: ${n} mód.`).join(" · ")],
-    ["Cabos CC (opção 1)",`${d.ops.string.strings.length} × ${num(d.c.dist+3)} m = ${num(d.ops.string.metros)} m por cor → ${Math.ceil(d.ops.string.metros/50)} bobina(s) de 50 m vermelha + preta`],
-    ["Conectores MC4 (opção 1)",`${2*d.ops.string.strings.length} pares (2 por string) + ${d.c.mc4res} reserva`],
+    ["Relação CC/CA (opção 1)",d.ops.string.invKW?num(d.kwp/d.ops.string.invKW*100)+"%":"–","adm"],
+    ["Strings por MPPT (opção 1)",d.ops.string.strings.map((n,k)=>`MPPT ${k+1}: ${n} mód.`).join(" · "),"adm"],
+    ["Cabos CC (opção 1)",`${d.ops.string.strings.length} × ${num(d.c.dist+3)} m = ${num(d.ops.string.metros)} m por cor → ${Math.ceil(d.ops.string.metros/50)} bobina(s) de 50 m vermelha + preta`,"adm"],
+    ["Conectores MC4 (opção 1)",`${2*d.ops.string.strings.length} pares (2 por string) + ${d.c.mc4res} reserva`,"adm"],
     ["Microinversores (opção 2)",invTxt(d.ops.micro)],
     ["Telhado",telNome],
     ["Área de telhado",`≈ ${num(d.area)} m²`],
@@ -1358,7 +1358,7 @@ function render(d){
 
   drawMes(o);
 }
-const rows=a=>a.map(r=>`<tr><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join("");
+const rows=a=>a.map(r=>`<tr${r[2]?` class="${r[2]}"`:""}><td>${r[0]}</td><td class="r">${r[1]}</td></tr>`).join("");
 const rows3=a=>a.map(r=>`<tr><td>${r[0]}</td><td class="r">${brl(r[1])}</td><td class="r">${brl(r[1]*12)}</td></tr>`).join("");
 function fmtAnos(y){const a=Math.floor(y),m=Math.round((y-a)*12);return m===12?`${a+1} anos`:`${a} ano${a===1?'':'s'}${m?` e ${m} ${m===1?'mês':'meses'}`:''}`}
 
