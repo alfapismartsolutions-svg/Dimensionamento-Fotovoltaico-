@@ -106,6 +106,10 @@ a.btn.disabled{opacity:.45;pointer-events:none}
 .capGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:600px){.capGrid{grid-template-columns:1fr}}
 .cepRow{display:grid;grid-template-columns:130px 1fr;gap:10px}
+body:not(.admin) .adm{display:none!important}
+body:not(.admin) .tabs{display:none}
+.admPill{display:none;font-size:12px;font-weight:700;background:#f2a516;color:#152534;border-radius:999px;padding:4px 10px;margin-left:6px;cursor:pointer;border:0}
+body.admin .admPill{display:inline-block}
 .capT{font-size:12px;font-weight:700;color:var(--muted)}
 .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 .tools button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
@@ -159,8 +163,9 @@ input:disabled,select:disabled{opacity:.55}
     <p>ALFAPI Engenharia Energética · pré-dimensionamento e orçamento on-grid</p></div></div>
     <div class="tabs">
       <button class="tab on" data-tab="sim">Simulação</button>
-      <button class="tab" data-tab="cfg">Parâmetros de preço</button>
-      <button class="tab" data-tab="leads">Contatos</button>
+      <button class="tab adm" data-tab="cfg">Parâmetros de preço</button>
+      <button class="tab adm" data-tab="leads">Contatos</button>
+      <button class="admPill" id="admSair" type="button" title="Sair do modo ALFAPI neste navegador">Modo ALFAPI · sair</button>
     </div>
   </div>
 </header>
@@ -192,17 +197,17 @@ input:disabled,select:disabled{opacity:.55}
       <div id="mapaZona" class="drop hidden"></div><input type="file" id="mapaFile" accept="image/*" hidden>
       <div class="row">
         <div><label>Estado (UF)</label><select id="uf"></select></div>
-        <div><label>HSP média anual (h/dia)</label><input id="hsp" type="number" step="0.01"></div>
+        <div class="adm"><label>HSP média anual (h/dia)</label><input id="hsp" type="number" step="0.01"></div>
       </div>
-      <div class="hint" id="hspFonte"></div>
-      <details class="det"><summary>Irradiação mês a mês (editável)</summary><div class="months" id="hspMeses"></div></details>
-      <div class="row">
+      <div class="hint adm" id="hspFonte"></div>
+      <details class="det adm"><summary>Irradiação mês a mês (editável)</summary><div class="months" id="hspMeses"></div></details>
+      <div class="row adm">
         <div><label>Orientação do telhado</label><select id="ori">
           <option value="0">Norte</option><option value="1">Nordeste / Noroeste</option><option value="2">Leste / Oeste</option><option value="3">Sudeste / Sudoeste</option><option value="4">Sul</option></select></div>
         <div><label>Inclinação</label><select id="incl">
           <option value="0">0–5° (laje / plano)</option><option value="10">10°</option><option value="15" selected>15° (ótimo no DF)</option><option value="20">20°</option><option value="30">30°</option><option value="45">45°</option></select></div>
       </div>
-      <div class="row">
+      <div class="row adm">
         <div><label>Perda por sombreamento (%)</label><input id="somb" type="number" value="0" min="0" max="80"></div>
         <div><label>Fator de orientação</label><input id="fori" readonly tabindex="-1"></div>
       </div>
@@ -261,15 +266,15 @@ input:disabled,select:disabled{opacity:.55}
         <div><label>Inversor string (opção 1)</label><select id="invMarca"><option value="">Menor custo</option></select></div>
         <div><label>Microinversor (opção 2)</label><select id="microSel"><option value="">Menor custo</option></select></div>
       </div>
-      <div class="row">
+      <div class="row adm">
         <div><label>Potência escolhida (W)</label><input id="wp" type="number" readonly></div>
         <div><label>Área do módulo (m²)</label><input id="area" type="number" step="0.01"></div>
       </div>
-      <div class="row">
+      <div class="row adm">
         <div><label>Taxa de desempenho (PR)</label><input id="pr" type="number" step="0.01" value="0.80"></div>
         <div><label>Cobertura desejada (%)</label><input id="cob" type="number" value="100"></div>
       </div>
-      <div class="hint">PR 0,75–0,82 cobre perdas por temperatura, cabos, sujeira e inversor. Orientação e sombreamento são aplicados à parte.</div>
+      <div class="hint adm">PR 0,75–0,82 cobre perdas por temperatura, cabos, sujeira e inversor. Orientação e sombreamento são aplicados à parte.</div>
     </div>
   </div>
 
@@ -297,7 +302,7 @@ input:disabled,select:disabled{opacity:.55}
         <div id="gmap" style="height:460px;border-radius:10px;margin-top:8px;border:1px solid var(--line);background:#ddd"></div>
         <div class="actions" style="margin-top:10px;align-items:center">
           <button class="btn mini" id="gImagens" type="button" style="background:var(--brand)">📸 Usar esta vista na proposta</button>
-          <button class="btn mini" id="gSolar" type="button" style="background:#f2a516;color:#152534">☀️ Analisar telhado (Google Solar API)</button>
+          <button class="btn mini adm" id="gSolar" type="button" style="background:#f2a516;color:#152534">☀️ Analisar telhado (Google Solar API)</button>
           <a class="btn sec mini" id="gExterno" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Google Maps ↗</a>
         </div>
         <div id="solarRes" class="contaSt hidden" style="margin-top:10px"></div>
@@ -311,7 +316,7 @@ input:disabled,select:disabled{opacity:.55}
           </div>
         </div>
         <div class="hint">Centralize e aproxime o telhado: a área visível vira a imagem do telhado (com escala para a disposição dos módulos) e o entorno do pino vira o mapa de localização da proposta.</div>
-        <div class="hint" id="gProv" style="margin-top:4px"></div>
+        <div class="hint adm" id="gProv" style="margin-top:4px"></div>
       </div>
     </div>
 
@@ -952,6 +957,15 @@ const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","
 const fiobPct=a=>a<=2022?0:a===2023?.15:a===2024?.30:a===2025?.45:a===2026?.60:a===2027?.75:a===2028?.90:1;
 
 // =================== CATÁLOGO (preços à vista Pix, levantados em nov/2026) ===================
+// ---- Modo ALFAPI (administrador): abre com o link secreto ?alfapi=CHAVE; o público vê só a simulação ----
+const ADM_HASH="761eb3ef7ad00462f8632411da32511d78422a340cb78803887dbedff3fddcd1";
+let ADMIN=false;try{ADMIN=localStorage.getItem("fv_admin")===ADM_HASH}catch(e){}
+if(ADMIN)document.body.classList.add("admin");
+(async()=>{const q=new URLSearchParams(location.search),t=q.get("alfapi");if(!t||!crypto.subtle)return;
+  const h=[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,"0")).join("");
+  q.delete("alfapi");history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:"")+location.hash);
+  if(h===ADM_HASH){try{localStorage.setItem("fv_admin",h)}catch(e){}location.reload()}})();
+document.getElementById("admSair").onclick=()=>{if(!confirm("Sair do modo ALFAPI neste navegador? Para voltar, abra o seu link de acesso."))return;try{localStorage.removeItem("fv_admin")}catch(e){}location.reload()};
 const CAT_DEF={
   // voc/vmp/isc (STC), bvoc (%/°C) e garantia vêm dos datasheets; null = não informado
   modulos:[
@@ -1298,7 +1312,7 @@ function render(d){
 
   // orçamento: duas opções
   const S=d.ops.string,M=d.ops.micro;
-  const tabOrc=op=>{let h="",gr=false;op.linhas.forEach(l=>h+=(l.cabo&&!gr&&(gr=true)?`<tr><td colspan="3" style="background:#f0ede5;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px">Cabos e conectores</td></tr>`:"")+`<tr><td>${esc(l.desc)}${l.forn?`<span class="forn">Fornecedor: ${esc(l.forn)}</span>`:""}</td><td class="r">${l.q}</td><td class="r">${brl(l.v)}</td></tr>`);
+  const tabOrc=op=>{let h="",gr=false;op.linhas.forEach(l=>h+=(l.cabo&&!gr&&(gr=true)?`<tr><td colspan="3" style="background:#f0ede5;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:5px 10px">Cabos e conectores</td></tr>`:"")+`<tr><td>${esc(l.desc)}${l.forn?`<span class="forn adm">Fornecedor: ${esc(l.forn)}</span>`:""}</td><td class="r">${l.q}</td><td class="r">${brl(l.v)}</td></tr>`);
     return h+`<tr class="tot"><td>Total</td><td></td><td class="r">${brl(op.total)}</td></tr><tr><td class="hint">À vista (${num(d.c.desc,1).replace(",0","")}% desc.) · ${brl2(d.kwp?op.total/(d.kwp*1000):0)}/Wp</td><td></td><td class="r hint">${brl(op.total*(1-d.c.desc/100))}</td></tr>`};
   $("t-orc1").innerHTML=tabOrc(S);$("t-orc2").innerHTML=tabOrc(M);
   $("opc1").classList.toggle("ref",o.tipo==="string");$("opc2").classList.toggle("ref",o.tipo==="micro");
@@ -1336,11 +1350,11 @@ function render(d){
   if(d.alvoAno<=0)al.push(["warn","Consumo igual ou abaixo do custo de disponibilidade: não há energia a compensar."]);
   if(d.fOri<0.9)al.push(["warn",`Orientação/inclinação desfavorável: o telhado produz ${num(d.fOri*100)}% do ideal, por isso foram necessários mais módulos.`]);
   if(d.somb>=15)al.push(["warn",`Sombreamento de ${num(d.somb)}%: o microinversor tende a ser a melhor opção.`]);
-  if(d.telInf==="nd")al.push(["info","Tipo de telhado não informado: a estrutura foi estimada para telha cerâmica e será confirmada na visita técnica."]);
+  if(d.telInf==="nd")al.push(["info","Tipo de telhado não informado: a estrutura foi estimada para telha cerâmica e será confirmada na visita técnica.","cli"]);
   else if(d.estr==="nd"&&(d.telhado==="ceramico"||d.telhado==="fibro"))al.push(["info","Estrutura do telhado não informada: o tipo de fixador será confirmado na visita técnica."]);
   const exc=d.alvoAno?(o.gerAno-soma(o.a1.map(r=>r.sim+r.comp)))/d.alvoAno:0;
   if(exc>0.20&&(+$("cob").value||100)>100)al.push(["warn",`Geração ${num(exc*100)}% acima do que o cliente consegue compensar: sobram ≈ ${num(o.saldoFim5)} kWh de créditos em 5 anos (expiram após 60 meses). Considere reduzir a cobertura.`]);
-  $("alerts").innerHTML=al.map(a=>`<div class="alert ${a[0]==='ok'?'ok':''}" ${a[0]==='info'?'style="background:#eef2fa;border-color:#c9d1e3;color:#14213d"':''}>${a[1]}</div>`).join("");
+  $("alerts").innerHTML=al.filter(a=>ADMIN||a[2]==="cli").map(a=>`<div class="alert ${a[0]==='ok'?'ok':''}" ${a[0]==='info'?'style="background:#eef2fa;border-color:#c9d1e3;color:#14213d"':''}>${a[1]}</div>`).join("");
 
   drawMes(o);
 }
@@ -1672,6 +1686,7 @@ $("coord").addEventListener("input",()=>{clearTimeout(_tCoord);_tCoord=setTimeou
 let _tCep=null;
 $("cep").addEventListener("input",()=>{let v=$("cep").value.replace(/\D/g,"").slice(0,8);
   $("cep").value=v.length>5?v.slice(0,5)+"-"+v.slice(5):v;clearTimeout(_tCep);if(v.length===8)_tCep=setTimeout(buscarCep,300);else $("cepHint").textContent=""});
+function avisarMapa(){const r=$("cardMapa").getBoundingClientRect();if(r.top>innerHeight-80||r.bottom<0)toast("📍 Local encontrado: veja o mapa logo abaixo")}
 async function buscarCep(){
   const cep=$("cep").value.replace(/\D/g,"");if(cep.length!==8)return;
   const hint=$("cepHint");hint.textContent="⏳ Buscando o CEP…";
@@ -1708,7 +1723,7 @@ async function buscarCep(){
   const z=prec==="rua"?19:17;
   if(MP.tipo==="google"&&MP.map){MP.map.setCenter(g);MP.map.setZoom(z);MP.mk.setPosition(g)}
   else if(MP.tipo==="esri"&&MP.map){MP.map.setView([g.lat,g.lng],z);MP.mk.setLatLng([g.lat,g.lng])}
-  definirPos(g.lat,g.lng);endAuto=true;if(MP.tipo==="iframe")googleBasico();
+  definirPos(g.lat,g.lng);endAuto=true;if(MP.tipo==="iframe")googleBasico();avisarMapa();
   $("gMsg").innerHTML=(prec==="rua"?"Pino na <b>rua do CEP</b>":"<b>Localização aproximada</b> ("+(prec==="bairro"?"centro do bairro":"região do CEP")+")")+
     ": arraste o pino até o telhado do cliente e clique em <b>📸 Usar esta vista na proposta</b>.";
 }
@@ -1724,7 +1739,7 @@ $("endereco").addEventListener("input",()=>{clearTimeout(_tEnd);_tEnd=setTimeout
   if(!g){$("gMsg").innerHTML='<span style="color:var(--warn)">Endereço não encontrado: complete com bairro/cidade ou clique no telhado no mapa.</span>';return}
   if(MP.tipo==="google"){MP.map.setCenter({lat:g.lat,lng:g.lng});MP.map.setZoom(g.z);MP.mk.setPosition({lat:g.lat,lng:g.lng})}
   else{MP.map.setView([g.lat,g.lng],g.z);MP.mk.setLatLng([g.lat,g.lng])}
-  definirPos(g.lat,g.lng);endAuto=true;
+  definirPos(g.lat,g.lng);endAuto=true;avisarMapa();
   $("gMsg").innerHTML=g.msg+" Depois enquadre o telhado e clique em <b>📸 Usar esta vista na proposta</b>."},1300)});
 
 // ---- captura da vista ----
@@ -2254,7 +2269,7 @@ function gerarPDF(){
   }
 
   // equipamentos e serviços: duas opções
-  const mostraForn=c.fornpdf>0;
+  const mostraForn=ADMIN&&c.fornpdf>0; // o cliente nunca vê fornecedores
   [["string","Opção 1 — Inversor string (de parede)"],["micro","Opção 2 — Microinversor"]].forEach(([k,tit],ix)=>{
     const op=d.ops[k];
     secao(sn()+tit,ix===0?60:60);
@@ -2412,7 +2427,7 @@ function renderLeads(){
       <td class="r">${L.invest_string?"R$ "+num(L.invest_string):"–"}</td><td class="r">${L.invest_micro?"R$ "+num(L.invest_micro):"–"}</td></tr>`).join("")
     :`<tr><td style="color:var(--muted)">Nenhum orçamento registrado neste navegador ainda.</td></tr>`}
 $("leadsCsv").onclick=()=>{const lista=store.get(LEADS_K)||[];if(!lista.length){toast("Nenhum registro para baixar");return}
-  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const q=v=>{let t=String(v==null?"":v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"'}; // evita fórmulas maliciosas no Excel
   const csv="﻿"+[LEAD_COLS.map(c=>q(c[1])).join(";")].concat(lista.map(L=>LEAD_COLS.map(c=>q(L[c[0]])).join(";"))).join("\r\n");
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="contatos-orcamentos-alfapi.csv";document.body.appendChild(a);a.click();a.remove()};
 $("leadsLimpar").onclick=()=>{if(!confirm("Apagar todos os contatos registrados neste navegador? (A planilha do Google não é afetada.)"))return;store.set(LEADS_K,[]);renderLeads();toast("Registro apagado")};
