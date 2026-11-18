@@ -101,7 +101,11 @@ a.btn.disabled{opacity:.45;pointer-events:none}
 .drop{border:1.5px dashed #c9c3b3;border-radius:10px;padding:14px;font-size:13px;color:var(--muted);text-align:center;background:#fbfaf7;cursor:pointer}
 .drop.on,.drop:focus{border-color:var(--brand);background:#f1f8ec;outline:none}
 .lnk{display:inline;margin:0;font-size:13px;color:var(--brand);text-decoration:underline;cursor:pointer;font-weight:600}
-#satPrev img{width:100%;border-radius:10px;margin:8px 0 6px;display:block}
+#satPrev img{width:100%;border-radius:10px;margin:4px 0 6px;display:block}
+#satZona,#mapaZona{display:none!important}
+.capGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.capGrid{grid-template-columns:1fr}}
+.capT{font-size:12px;font-weight:700;color:var(--muted)}
 .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 .tools button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
 .tools button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
@@ -180,16 +184,8 @@ input:disabled,select:disabled{opacity:.55}
       <div class="locrow"><input id="coord" placeholder="-15.8267, -47.9218  ou cole o link"><button class="btn mini" id="gLocalizar" type="button">📍 Localizar no mapa</button></div>
       <div class="hint"><a class="lnk" id="abrirMapa" target="_blank" rel="noopener" style="font-weight:600">Abrir no Google Maps ↗</a></div>
       <div class="hint" id="coordHint">No Google Maps, clique com o botão direito no telhado e clique nas coordenadas para copiar.</div>
-      <label>Imagem de satélite do telhado <span style="font-weight:500">(vai para o PDF)</span></label>
-      <div id="satZona" class="drop" tabindex="0">Tire um print do telhado (Win + Shift + S) e <b>cole aqui com Ctrl + V</b>, arraste a imagem ou <label for="satFile" class="lnk">escolha um arquivo</label></div>
-      <input type="file" id="satFile" accept="image/*" hidden>
-      <div id="satPrev" class="hidden"><img id="satImg" alt="Imagem de satélite"><div class="locrow"><input id="satFonte" value="Imagem de satélite: Google"><button class="btn sec mini" id="satRem" type="button">Remover</button></div></div>
-      <label>Mapa de localização <span style="font-weight:500">(vista geral com ruas, vai para o PDF)</span></label>
-      <div id="mapaZona" class="drop" tabindex="0">Print do Google Maps mostrando o entorno: clique aqui e <b>cole com Ctrl + V</b>, arraste ou <label for="mapaFile" class="lnk">escolha um arquivo</label></div>
-      <input type="file" id="mapaFile" accept="image/*" hidden>
-      <div id="mapaPrev" class="hidden"><canvas id="mapaCv" style="width:100%;border-radius:10px;margin:8px 0 2px;display:block;cursor:crosshair"></canvas>
-        <div class="hint" style="margin:0 0 6px">Clique no mapa para posicionar o pino no imóvel.</div>
-        <div class="locrow"><input id="mapaFonte" value="Mapa: Google"><button class="btn sec mini" id="mapaRem" type="button">Remover</button></div></div>
+      <div id="satZona" class="drop hidden"></div><input type="file" id="satFile" accept="image/*" hidden>
+      <div id="mapaZona" class="drop hidden"></div><input type="file" id="mapaFile" accept="image/*" hidden>
       <div class="row">
         <div><label>Estado (UF)</label><select id="uf"></select></div>
         <div><label>HSP média anual (h/dia)</label><input id="hsp" type="number" step="0.01"></div>
@@ -306,6 +302,15 @@ input:disabled,select:disabled{opacity:.55}
           <a class="btn sec mini" id="gExterno" target="_blank" rel="noopener" style="text-decoration:none">Abrir no Google Maps ↗</a>
         </div>
         <div id="solarRes" class="contaSt hidden" style="margin-top:10px"></div>
+        <div id="capturas" class="hidden" style="margin-top:12px">
+          <label>Imagens que vão para a proposta</label>
+          <div class="capGrid">
+            <div id="satPrev" class="hidden"><div class="capT">Telhado (satélite)</div><img id="satImg" alt="Imagem de satélite do telhado">
+              <input id="satFonte" type="hidden" value="Imagem de satélite: Google"><button class="btn sec mini" id="satRem" type="button">Remover</button></div>
+            <div id="mapaPrev" class="hidden"><div class="capT">Localização (clique para mover o pino)</div><canvas id="mapaCv" style="width:100%;border-radius:10px;margin:4px 0 6px;display:block;cursor:crosshair"></canvas>
+              <input id="mapaFonte" type="hidden" value="Mapa: Google"><button class="btn sec mini" id="mapaRem" type="button">Remover</button></div>
+          </div>
+        </div>
         <div class="hint">Centralize e aproxime o telhado: a área visível vira a imagem do telhado (com escala para a disposição dos módulos) e o entorno do pino vira o mapa de localização da proposta.</div>
         <div class="hint" id="gProv" style="margin-top:4px"></div>
       </div>
@@ -313,7 +318,7 @@ input:disabled,select:disabled{opacity:.55}
 
     <div class="card" id="cardArr" style="margin-top:18px">
       <h2>Disposição dos módulos</h2>
-      <div id="arrVazio" class="hint">Adicione a imagem de satélite do telhado no passo 1 (clique na área e cole com Ctrl + V) para desenhar a disposição dos módulos.</div>
+      <div id="arrVazio" class="hint">Na etapa 1, posicione o telhado no mapa e clique em <b>📸 Usar esta vista na proposta</b>: a imagem aparece aqui para desenhar a disposição dos módulos.</div>
       <div id="arrEditor" class="hidden">
         <div class="tools" id="arrTools">
           <button data-m="escala">📏 Escala</button>
@@ -1496,6 +1501,10 @@ document.addEventListener("paste",e=>{
   const it=[...(e.clipboardData||{}).items||[]].find(i=>i.type&&(i.type.startsWith("image/")||i.type==="application/pdf"));
   if(it){e.preventDefault();carregarImagem(it.getAsFile())}
 });
+// mostra o quadro "Imagens que vão para a proposta" só quando há imagem capturada
+(()=>{const upd=()=>{const vazio=$("satPrev").classList.contains("hidden")&&$("mapaPrev").classList.contains("hidden");
+  const era=$("capturas").classList.contains("hidden");$("capturas").classList.toggle("hidden",vazio);if(era&&!vazio)setTimeout(()=>window.dispatchEvent(new Event("resize")),30)};
+  const ob=new MutationObserver(upd);["satPrev","mapaPrev"].forEach(i=>ob.observe($(i),{attributes:true,attributeFilter:["class"]}))})();
 $("satRem").onclick=()=>{SAT=null;$("satImg").removeAttribute("src");$("satPrev").classList.add("hidden");$("satZona").classList.remove("hidden");$("satFile").value="";
   if(typeof arrNovaImagem==="function")arrNovaImagem()};
 $("mapaRem").onclick=()=>{MAPA=null;$("mapaPrev").classList.add("hidden");$("mapaZona").classList.remove("hidden");$("mapaFile").value=""};
@@ -1611,7 +1620,7 @@ function mapaReserva(motivo){ // mapa do Google incorporado (sem chave) quando o
   const end=$("endereco").value.trim(),q=LOC?`${LOC.lat},${LOC.lng}`:(end?end+", ":"")+ufSel.value+", Brasil";
   MP.map=null;MP.mk=null;MP.tipo="iframe";
   const el=$("gmap");el.innerHTML=`<iframe title="Mapa" style="width:100%;height:100%;border:0;border-radius:10px" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=k&z=${LOC?19:16}&hl=pt-BR&output=embed"></iframe>`;
-  $("gMsg").innerHTML=`<span style="color:var(--warn)">Mapa interativo indisponível (${esc(motivo)}). Mostrando o Google Maps básico: dá para ver o imóvel, mas para capturar a vista use o botão de prints no passo 1.</span>`}
+  $("gMsg").innerHTML=`<span style="color:var(--warn)">Mapa interativo indisponível (${esc(motivo)}). Mostrando o Google Maps básico: dá para ver o imóvel, mas a captura automática não funciona nele. Recarregue a página para tentar de novo; se continuar assim, tire um print do telhado e cole com Ctrl + V em qualquer lugar da página (o 1º print vira a imagem do telhado e o 2º, o mapa de localização).</span>`}
 function googleBasico(){ // Google Maps incorporado, sem chave
   const end=$("endereco").value.trim(),q=LOC?`${LOC.lat},${LOC.lng}`:(end?end+", ":"")+ufSel.value+", Brasil";
   if(MP.tipo!=="iframe"){const novo=$("gmap").cloneNode(false);$("gmap").replaceWith(novo)}
