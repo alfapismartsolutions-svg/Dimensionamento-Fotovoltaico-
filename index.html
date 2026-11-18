@@ -105,6 +105,7 @@ a.btn.disabled{opacity:.45;pointer-events:none}
 #satZona,#mapaZona{display:none!important}
 .capGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:600px){.capGrid{grid-template-columns:1fr}}
+.cepRow{display:grid;grid-template-columns:130px 1fr;gap:10px}
 .capT{font-size:12px;font-weight:700;color:var(--muted)}
 .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
 .tools button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)}
@@ -178,8 +179,11 @@ input:disabled,select:disabled{opacity:.55}
         <div><label>E-mail</label><input id="cliEmail" type="email" inputmode="email" placeholder="nome@email.com"></div>
       </div>
       <div class="hint">Informe o telefone ou o e-mail para ver ou gerar a proposta. A ALFAPI usa esses dados só para retornar sobre este orçamento.</div>
-      <label>Endereço / cidade <span style="font-weight:500">(opcional)</span></label>
-      <input id="endereco" placeholder="Ex.: SHIS QI 15, Lago Sul – Brasília">
+      <div class="cepRow">
+        <div><label>CEP</label><input id="cep" inputmode="numeric" placeholder="00000-000" maxlength="9" autocomplete="postal-code"></div>
+        <div><label>Endereço / cidade <span style="font-weight:500">(opcional)</span></label><input id="endereco" placeholder="Ex.: SHIS QI 15, Lago Sul – Brasília"></div>
+      </div>
+      <div class="hint" id="cepHint"></div>
       <label>Localização <span style="font-weight:500">(coordenadas ou link do Google Maps)</span></label>
       <input id="coord" placeholder="-15.8267, -47.9218  ou cole o link">
       <div class="hint"><a class="lnk" id="abrirMapa" target="_blank" rel="noopener" style="font-weight:600">Abrir no Google Maps ↗</a></div>
@@ -1396,7 +1400,7 @@ Valores estimados, já considerando o custo mínimo da distribuidora e a cobran�
   try{await navigator.clipboard.writeText(txt);toast("Resumo copiado")}catch(e){toast("Não foi possível copiar")}
 };
 $("limpar").onclick=()=>{
-  $("cliente").value="";$("cliTel").value="";$("cliEmail").value="";ufSel.value="DF";preencherHSP("DF");$("consumo").value=600;$("conta").value=550;$("tarifa").value=1.10;
+  $("cliente").value="";$("cep").value="";$("cepHint").textContent="";$("cliTel").value="";$("cliEmail").value="";ufSel.value="DF";preencherHSP("DF");$("consumo").value=600;$("conta").value=550;$("tarifa").value=1.10;
   $("cip").value=0;$("simult").value="0.35";$("ori").value="0";$("incl").value="15";$("somb").value=0;
   $("telhado").value="nd";$("madeira").value="nd";$("modulo").value="";$("modPot").value="";aplicarModulo();
   $("pr").value=0.80;$("cob").value=100;$("endereco").value="";$("coord").value="";atualizarLoc(false);$("satRem").click();
@@ -1664,6 +1668,30 @@ $("coord").addEventListener("input",()=>{clearTimeout(_tCoord);_tCoord=setTimeou
   if(MP.tipo==="google"&&MP.map){MP.map.setCenter({lat:LOC.lat,lng:LOC.lng});MP.map.setZoom(19);MP.mk.setPosition({lat:LOC.lat,lng:LOC.lng})}
   else if(MP.tipo==="esri"&&MP.map){MP.map.setView([LOC.lat,LOC.lng],19);MP.mk.setLatLng([LOC.lat,LOC.lng])}
   else if(MP.tipo==="iframe")googleBasico()},900)});
+// ---- CEP: preenche o endereço e leva o pino ao local ----
+let _tCep=null;
+$("cep").addEventListener("input",()=>{let v=$("cep").value.replace(/\D/g,"").slice(0,8);
+  $("cep").value=v.length>5?v.slice(0,5)+"-"+v.slice(5):v;clearTimeout(_tCep);if(v.length===8)_tCep=setTimeout(buscarCep,300);else $("cepHint").textContent=""});
+async function buscarCep(){
+  const cep=$("cep").value.replace(/\D/g,"");if(cep.length!==8)return;
+  const hint=$("cepHint");hint.textContent="⏳ Buscando o CEP…";
+  let r=null;
+  try{r=await comTempo(fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`),8000).then(x=>x.ok?x.json():null)}catch(e){}
+  if(!r||!r.city)try{const v=await comTempo(fetch(`https://viacep.com.br/ws/${cep}/json/`),8000).then(x=>x.json());
+    if(v&&!v.erro)r={street:v.logradouro,neighborhood:v.bairro,city:v.localidade,state:v.uf}}catch(e){}
+  if(!r||!r.city){hint.innerHTML='<span style="color:var(--warn)">CEP não encontrado. Confira os números ou digite o endereço.</span>';return}
+  if(r.state&&[...ufSel.options].some(o=>o.value===r.state)&&ufSel.value!==r.state){ufSel.value=r.state;ufSel.onchange()}
+  $("endereco").value=[r.street,r.neighborhood,r.city].filter(Boolean).join(", ");
+  atualizarLoc(false);
+  hint.textContent=`${[r.neighborhood,r.city,r.state].filter(Boolean).join(" · ")}. Complete com o número ou o conjunto, se quiser.`;
+  const co=r.location&&r.location.coordinates,lat=co&&+co.latitude,lng=co&&+co.longitude;
+  if(lat&&lng&&Math.abs(lat)<=34&&Math.abs(lng)<=75){ // o CEP já trouxe coordenadas
+    if(MP.tipo==="google"&&MP.map){MP.map.setCenter({lat,lng});MP.map.setZoom(18);MP.mk.setPosition({lat,lng})}
+    else if(MP.tipo==="esri"&&MP.map){MP.map.setView([lat,lng],18);MP.mk.setLatLng([lat,lng])}
+    definirPos(lat,lng);endAuto=true;if(MP.tipo==="iframe")googleBasico();
+    $("gMsg").innerHTML="<b>Localização aproximada</b> pelo CEP: arraste o pino até o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
+  }else{endAuto=true;$("endereco").dispatchEvent(new Event("input"))} // procura pelo endereço do CEP
+}
 let _tEnd=null,endAuto=false,_endSeq=0;
 $("coord").addEventListener("input",()=>{endAuto=false});
 $("endereco").addEventListener("input",()=>{clearTimeout(_tEnd);_tEnd=setTimeout(async()=>{
@@ -2113,17 +2141,18 @@ function gerarPDF(){
   T(`Proposta nº ${numProp}  ·  Emitida em ${dataBR(agora)}  ·  Válida até ${dataBR(val)}`,M,y);y+=7;
 
   // bloco do cliente
-  const locTxt=[end,LOC?"Coordenadas: "+fmtCoord(LOC):""].filter(Boolean).join("  ·  ");
+  const locTxt=end,coordTxt=LOC?"Coordenadas: "+fmtCoord(LOC):"";
   const contTxt=[$("cliTel").value.trim(),$("cliEmail").value.trim()].filter(Boolean).join("  ·  ");
-  doc.setFillColor(...CLARO);doc.roundedRect(M,y,CW,(locTxt||contTxt)?19:14,2,2,"F");
+  doc.setFillColor(...CLARO);const hCli=coordTxt&&(locTxt||contTxt)?24:(locTxt||contTxt||coordTxt)?19:14;doc.roundedRect(M,y,CW,hCli,2,2,"F");
   doc.setFontSize(8);doc.setTextColor(...CINZA);T("CLIENTE",M+4,y+5);
   doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...NAVY);T(cli,M+4,y+10.5);
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...CINZA);
   const lig={30:"Monofásica",50:"Bifásica",100:"Trifásica"}[d.disp];
   T(`Ligação ${lig}  ·  ${$("uf").value}`,W-M-4,y+10.5,{align:"right"});
-  if(locTxt)T(doc.splitTextToSize(pdfTxt(locTxt),contTxt?CW*0.55:CW-8)[0],M+4,y+15.5);
+  if(locTxt)T(doc.splitTextToSize(pdfTxt(locTxt),contTxt?CW*0.6:CW-8)[0],M+4,y+15.5);
   if(contTxt)T(contTxt,W-M-4,y+15.5,{align:"right"});
-  y+=((locTxt||contTxt)?19:14)+7;
+  if(coordTxt)T(coordTxt,M+4,y+(locTxt||contTxt?20.5:15.5));
+  y+=hCli+7;
 
   // localização do projeto (mapa com pino)
   const MP=MAPA?imagemMapa():null;
