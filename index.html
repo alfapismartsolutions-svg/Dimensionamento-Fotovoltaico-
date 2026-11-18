@@ -1675,22 +1675,33 @@ $("cep").addEventListener("input",()=>{let v=$("cep").value.replace(/\D/g,"").sl
 async function buscarCep(){
   const cep=$("cep").value.replace(/\D/g,"");if(cep.length!==8)return;
   const hint=$("cepHint");hint.textContent="⏳ Buscando o CEP…";
-  let r=null;
-  try{r=await comTempo(fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`),8000).then(x=>x.ok?x.json():null)}catch(e){}
-  if(!r||!r.city)try{const v=await comTempo(fetch(`https://viacep.com.br/ws/${cep}/json/`),8000).then(x=>x.json());
-    if(v&&!v.erro)r={street:v.logradouro,neighborhood:v.bairro,city:v.localidade,state:v.uf}}catch(e){}
+  const getJ=u=>comTempo(fetch(u),8000).then(x=>x.ok?x.json():null).catch(()=>null);
+  // endereço: ViaCEP (logradouro limpo); BrasilAPI como reserva e pelas coordenadas aproximadas
+  let r=null;const v=await getJ(`https://viacep.com.br/ws/${cep}/json/`);
+  if(v&&!v.erro)r={street:v.logradouro,neighborhood:v.bairro,city:v.localidade,state:v.uf};
+  const b=await getJ(`https://brasilapi.com.br/api/cep/v2/${cep}`);
+  if(!r&&b&&b.city)r={street:b.street,neighborhood:b.neighborhood,city:b.city,state:b.state};
   if(!r||!r.city){hint.innerHTML='<span style="color:var(--warn)">CEP não encontrado. Confira os números ou digite o endereço.</span>';return}
   if(r.state&&[...ufSel.options].some(o=>o.value===r.state)&&ufSel.value!==r.state){ufSel.value=r.state;ufSel.onchange()}
-  $("endereco").value=[r.street,r.neighborhood,r.city].filter(Boolean).join(", ");
-  atualizarLoc(false);
+  $("endereco").value=[r.street,r.neighborhood,r.city].filter(Boolean).join(", ");atualizarLoc(false);
+  hint.textContent="⏳ Localizando no mapa…";
+  // posição: 1) Google (com chave) 2) rua + cidade no OpenStreetMap 3) rua, bairro e cidade 4) coordenadas do CEP 5) bairro
+  let g=null,prec="rua";
+  if(MP.tipo==="google")g=await geocodificar([r.street,r.neighborhood,r.city+" - "+r.state,cep].filter(Boolean).join(", "),"google");
+  const nom=async q=>{const a=await getJ(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&${q}`);return a&&a.length?{lat:+a[0].lat,lng:+a[0].lon}:null};
+  if(!g&&r.street)g=await nom(`street=${encodeURIComponent(r.street)}&city=${encodeURIComponent(r.city)}&state=${encodeURIComponent(r.state||"")}`);
+  if(!g&&r.street){await new Promise(z=>setTimeout(z,1100));g=await nom(`q=${encodeURIComponent([r.street,r.neighborhood,r.city,r.state,"Brasil"].filter(Boolean).join(", "))}`)}
+  const co=b&&b.location&&b.location.coordinates;
+  if(!g&&co&&+co.latitude&&+co.longitude){g={lat:+co.latitude,lng:+co.longitude};prec="aprox"}
+  if(!g&&r.neighborhood){await new Promise(z=>setTimeout(z,1100));g=await nom(`q=${encodeURIComponent([r.neighborhood,r.city,r.state,"Brasil"].join(", "))}`);prec="bairro"}
   hint.textContent=`${[r.neighborhood,r.city,r.state].filter(Boolean).join(" · ")}. Complete com o número ou o conjunto, se quiser.`;
-  const co=r.location&&r.location.coordinates,lat=co&&+co.latitude,lng=co&&+co.longitude;
-  if(lat&&lng&&Math.abs(lat)<=34&&Math.abs(lng)<=75){ // o CEP já trouxe coordenadas
-    if(MP.tipo==="google"&&MP.map){MP.map.setCenter({lat,lng});MP.map.setZoom(18);MP.mk.setPosition({lat,lng})}
-    else if(MP.tipo==="esri"&&MP.map){MP.map.setView([lat,lng],18);MP.mk.setLatLng([lat,lng])}
-    definirPos(lat,lng);endAuto=true;if(MP.tipo==="iframe")googleBasico();
-    $("gMsg").innerHTML="<b>Localização aproximada</b> pelo CEP: arraste o pino até o telhado e clique em <b>📸 Usar esta vista na proposta</b>.";
-  }else{endAuto=true;$("endereco").dispatchEvent(new Event("input"))} // procura pelo endereço do CEP
+  if(!g){$("gMsg").innerHTML='<span style="color:var(--warn)">Endereço do CEP não encontrado no mapa: arraste o pino até o telhado.</span>';return}
+  const z=prec==="rua"?19:17;
+  if(MP.tipo==="google"&&MP.map){MP.map.setCenter(g);MP.map.setZoom(z);MP.mk.setPosition(g)}
+  else if(MP.tipo==="esri"&&MP.map){MP.map.setView([g.lat,g.lng],z);MP.mk.setLatLng([g.lat,g.lng])}
+  definirPos(g.lat,g.lng);endAuto=true;if(MP.tipo==="iframe")googleBasico();
+  $("gMsg").innerHTML=(prec==="rua"?"Pino na <b>rua do CEP</b>":"<b>Localização aproximada</b> ("+(prec==="bairro"?"centro do bairro":"região do CEP")+")")+
+    ": arraste o pino até o telhado do cliente e clique em <b>📸 Usar esta vista na proposta</b>.";
 }
 let _tEnd=null,endAuto=false,_endSeq=0;
 $("coord").addEventListener("input",()=>{endAuto=false});
