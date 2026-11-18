@@ -1675,7 +1675,8 @@ $("cep").addEventListener("input",()=>{let v=$("cep").value.replace(/\D/g,"").sl
 async function buscarCep(){
   const cep=$("cep").value.replace(/\D/g,"");if(cep.length!==8)return;
   const hint=$("cepHint");hint.textContent="⏳ Buscando o CEP…";
-  const getJ=u=>comTempo(fetch(u),8000).then(x=>x.ok?x.json():null).catch(()=>null);
+  const DBG=/[?&]debug/.test(location.search),log=[];
+  const getJ=u=>comTempo(fetch(u),8000).then(x=>{log.push(u.split("?")[0].split("/")[2]+":"+x.status);return x.ok?x.json():null}).catch(e=>{log.push(u.split("/")[2]+":ERR "+e.message);return null});
   // endereço: ViaCEP (logradouro limpo); BrasilAPI como reserva e pelas coordenadas aproximadas
   let r=null;const v=await getJ(`https://viacep.com.br/ws/${cep}/json/`);
   if(v&&!v.erro)r={street:v.logradouro,neighborhood:v.bairro,city:v.localidade,state:v.uf};
@@ -1695,6 +1696,7 @@ async function buscarCep(){
   if(!g&&co&&+co.latitude&&+co.longitude){g={lat:+co.latitude,lng:+co.longitude};prec="aprox"}
   if(!g&&r.neighborhood){await new Promise(z=>setTimeout(z,1100));g=await nom(`q=${encodeURIComponent([r.neighborhood,r.city,r.state,"Brasil"].join(", "))}`);prec="bairro"}
   hint.textContent=`${[r.neighborhood,r.city,r.state].filter(Boolean).join(" · ")}. Complete com o número ou o conjunto, se quiser.`;
+  if(DBG)hint.textContent+=" ["+log.join(" | ")+" | g="+JSON.stringify(g)+"]";
   if(!g){$("gMsg").innerHTML='<span style="color:var(--warn)">Endereço do CEP não encontrado no mapa: arraste o pino até o telhado.</span>';return}
   const z=prec==="rua"?19:17;
   if(MP.tipo==="google"&&MP.map){MP.map.setCenter(g);MP.map.setZoom(z);MP.mk.setPosition(g)}
