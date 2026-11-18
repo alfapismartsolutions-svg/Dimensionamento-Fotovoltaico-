@@ -1689,8 +1689,15 @@ async function buscarCep(){
   // posição: 1) Google (com chave) 2) rua + cidade no OpenStreetMap 3) rua, bairro e cidade 4) coordenadas do CEP 5) bairro
   let g=null,prec="rua";
   if(MP.tipo==="google")g=await geocodificar([r.street,r.neighborhood,r.city+" - "+r.state,cep].filter(Boolean).join(", "),"google");
-  const nom=async q=>{const a=await getJ(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&${q}`);return a&&a.length?{lat:+a[0].lat,lng:+a[0].lon}:null};
-  if(!g&&r.street)g=await nom(`street=${encodeURIComponent(r.street)}&city=${encodeURIComponent(r.city)}&state=${encodeURIComponent(r.state||"")}`);
+  const espera=()=>new Promise(z=>setTimeout(z,1100)); // limite do OpenStreetMap: 1 consulta por segundo
+  const nom=async q=>{const u=`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&accept-language=pt-BR&${q}`;
+    let a=await getJ(u);if(a===null){await espera();a=await getJ(u)} // tenta de novo se o serviço falhar
+    return a&&a.length?{lat:+a[0].lat,lng:+a[0].lon}:null};
+  const ruaEst=s=>`street=${encodeURIComponent(s)}&city=${encodeURIComponent(r.city)}&state=${encodeURIComponent(r.state||"")}`;
+  if(!g&&r.street)g=await nom(ruaEst(r.street));
+  // DF e condomínios: tenta só a quadra (ex.: "SHIS QI 15 Conjunto 4" → "SHIS QI 15")
+  const curta=r.street&&r.street.replace(/\s+(Conjunto|Conj\.?|Bloco|Casa|Lote|Rua|Chácara|Ch\.?|Módulo|Trecho)\b.*$/i,"").trim();
+  if(!g&&curta&&curta!==r.street){await espera();g=await nom(ruaEst(curta))}
   if(!g&&r.street){await new Promise(z=>setTimeout(z,1100));g=await nom(`q=${encodeURIComponent([r.street,r.neighborhood,r.city,r.state,"Brasil"].filter(Boolean).join(", "))}`)}
   const co=b&&b.location&&b.location.coordinates;
   if(!g&&co&&+co.latitude&&+co.longitude){g={lat:+co.latitude,lng:+co.longitude};prec="aprox"}
