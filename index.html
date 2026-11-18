@@ -206,10 +206,6 @@ input:disabled,select:disabled{opacity:.55}
         <div><label>Perda por sombreamento (%)</label><input id="somb" type="number" value="0" min="0" max="80"></div>
         <div><label>Fator de orientação</label><input id="fori" readonly tabindex="-1"></div>
       </div>
-      <label>Tipo de ligação</label>
-      <div class="seg" id="lig">
-        <button data-v="30">Monofásica</button><button data-v="50">Bifásica</button><button data-v="100" class="on">Trifásica</button>
-      </div>
     </div>
 
     <div class="card">
@@ -217,6 +213,12 @@ input:disabled,select:disabled{opacity:.55}
       <div id="contaZona" class="drop conta" tabindex="0" style="margin-bottom:10px">📄 <b>Preencher pela conta de luz</b><br>Arraste o PDF ou a foto da conta, clique aqui e cole (Ctrl + V) ou <label for="contaFile" class="lnk">escolha o arquivo</label>. Os meses do histórico são lidos e você pode corrigir qualquer valor.</div>
       <input type="file" id="contaFile" accept="application/pdf,image/*" hidden>
       <div id="contaStatus" class="contaSt hidden"></div>
+      <label>Tipo de ligação (padrão de entrada)</label>
+      <div class="seg" id="lig">
+        <button data-v="30">Monofásica</button><button data-v="50">Bifásica</button><button data-v="100" class="on">Trifásica</button>
+      </div>
+      <div class="hint" style="margin-bottom:12px">Aparece na conta de luz. Define o custo de disponibilidade: 30 kWh (mono), 50 kWh (bi) ou 100 kWh (tri), que continua sendo cobrado mesmo com o sistema.</div>
+      <label>Como informar o consumo</label>
       <div class="seg" id="modo">
         <button data-v="media" class="on">Média mensal</button><button data-v="12m">12 meses</button><button data-v="conta">Valor da conta</button>
       </div>
@@ -2338,7 +2340,7 @@ function registrarLead(origem){
   const d=last;if(!d)return;
   const o1=d.ops&&d.ops.string,o2=d.ops&&d.ops.micro,agora=new Date();
   const L={data:agora.toLocaleString("pt-BR"),ts:agora.getTime(),nome:$("cliente").value.trim(),telefone:$("cliTel").value.trim(),email:$("cliEmail").value.trim(),
-    endereco:$("endereco").value.trim(),uf:$("uf").value,coordenadas:LOC?fmtCoord(LOC):"",consumo_kwh_mes:Math.round(d.consMed||0),
+    endereco:$("endereco").value.trim(),uf:$("uf").value,coordenadas:LOC?fmtCoord(LOC):"",consumo_kwh_mes:Math.round(d.consMed||0),ligacao:(document.querySelector("#lig .on")||{}).textContent||"",
     potencia_kwp:+(+d.kwp).toFixed(2),modulos:d.nMod,telhado:d.telInf==="nd"?"não informado":d.telhado,
     invest_string:o1?Math.round(o1.total):"",invest_micro:o2?Math.round(o2.total):"",origem};
   const lista=store.get(LEADS_K)||[];
@@ -2347,16 +2349,16 @@ function registrarLead(origem){
   store.set(LEADS_K,lista.slice(-500));
   if(LEADS_URL)try{fetch(LEADS_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(L)}).catch(()=>{})}catch(e){}}
 const LEAD_COLS=[["data","Data"],["nome","Nome"],["telefone","Telefone"],["email","E-mail"],["endereco","Endereço"],["uf","UF"],["coordenadas","Coordenadas"],
-  ["consumo_kwh_mes","Consumo (kWh/mês)"],["potencia_kwp","Potência (kWp)"],["modulos","Módulos"],["telhado","Telhado"],["invest_string","Invest. string (R$)"],["invest_micro","Invest. micro (R$)"],["origem","Origem"]];
+  ["consumo_kwh_mes","Consumo (kWh/mês)"],["ligacao","Ligação"],["potencia_kwp","Potência (kWp)"],["modulos","Módulos"],["telhado","Telhado"],["invest_string","Invest. string (R$)"],["invest_micro","Invest. micro (R$)"],["origem","Origem"]];
 function renderLeads(){
   const lista=(store.get(LEADS_K)||[]).slice().reverse();
   $("leadsInfo").innerHTML=(LEADS_URL?`Os orçamentos feitos em <b>qualquer aparelho</b> são enviados para a planilha do Google da ALFAPI${LEADS_PLANILHA?` (<a href="${LEADS_PLANILHA}" target="_blank" rel="noopener">abrir planilha</a>)`:""}. `
     :`<span class="w">A planilha online ainda não está ligada: por enquanto só ficam aqui os orçamentos feitos <b>neste navegador</b>.</span> `)+
     `Abaixo, ${lista.length} registro(s) deste navegador.`;
   const wa=t=>{let n=soDig(t);if(!n)return "";if(n.length<=11)n="55"+n;return `<a href="https://wa.me/${n}" target="_blank" rel="noopener">${esc(t)}</a>`};
-  $("t-leads").innerHTML=lista.length?`<tr><th>Data</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Local</th><th class="r">Consumo</th><th class="r">kWp</th><th class="r">String</th><th class="r">Micro</th></tr>`+
+  $("t-leads").innerHTML=lista.length?`<tr><th>Data</th><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Local</th><th class="r">Consumo</th><th>Ligação</th><th class="r">kWp</th><th class="r">String</th><th class="r">Micro</th></tr>`+
     lista.map(L=>`<tr><td>${esc(L.data)}</td><td>${esc(L.nome)}</td><td>${wa(L.telefone)}</td><td>${L.email?`<a href="mailto:${esc(L.email)}">${esc(L.email)}</a>`:""}</td>
-      <td>${esc([L.endereco,L.uf].filter(Boolean).join(" – "))}</td><td class="r">${num(L.consumo_kwh_mes)} kWh</td><td class="r">${num(L.potencia_kwp,2)}</td>
+      <td>${esc([L.endereco,L.uf].filter(Boolean).join(" – "))}</td><td class="r">${num(L.consumo_kwh_mes)} kWh</td><td>${esc(L.ligacao||"")}</td><td class="r">${num(L.potencia_kwp,2)}</td>
       <td class="r">${L.invest_string?"R$ "+num(L.invest_string):"–"}</td><td class="r">${L.invest_micro?"R$ "+num(L.invest_micro):"–"}</td></tr>`).join("")
     :`<tr><td style="color:var(--muted)">Nenhum orçamento registrado neste navegador ainda.</td></tr>`}
 $("leadsCsv").onclick=()=>{const lista=store.get(LEADS_K)||[];if(!lista.length){toast("Nenhum registro para baixar");return}
